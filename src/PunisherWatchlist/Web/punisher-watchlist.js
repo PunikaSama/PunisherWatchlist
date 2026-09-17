@@ -1,8 +1,8 @@
 (function () {
     "use strict";
 
-    if (window.__punisherWatchlistV107) return;
-    window.__punisherWatchlistV107 = true;
+    if (window.__punisherWatchlistV108) return;
+    window.__punisherWatchlistV108 = true;
 
     const isWatchlistRoute = () => location.search.includes("pw-watchlist=1") || location.hash.includes("pw-watchlist=1");
     if (isWatchlistRoute()) document.documentElement.classList.add("pw-watchlist-route-active");
@@ -84,7 +84,7 @@
             state.loading = apiJson("/PunisherWatchlist/items")
                 .then(payload => {
                     const ids = payload?.ItemIds || payload?.itemIds || [];
-                    state.ids = new Set(ids.map(id => String(id).toLowerCase()));
+                    state.ids = new Set([...ids.map(id => String(id).toLowerCase()), ...readLocalIds()]);
                     state.loaded = true;
                     writeLocalIds();
                     syncAllButtons();
@@ -153,6 +153,49 @@
         return supportedTypes.has(item?.Type || item?.type);
     }
 
+    function parentSeriesId(item) {
+        const type = item?.Type || item?.type;
+        if (type !== "Episode" && type !== "Season") return "";
+        return String(item?.SeriesId || item?.seriesId || "").toLowerCase();
+    }
+
+    async function canonicalClientId(itemId) {
+        const sourceKey = itemId.toLowerCase();
+        const known = state.aliases.get(sourceKey);
+        if (known) return known;
+        try {
+            await loadItems([itemId]);
+            const seriesId = parentSeriesId(state.itemCache.get(sourceKey));
+            if (seriesId) {
+                state.aliases.set(sourceKey, seriesId);
+                return seriesId;
+            }
+        } catch (error) {
+            console.warn("PunisherWatchlist could not resolve the parent series in the client.", error);
+        }
+        return sourceKey;
+    }
+
+    async function normalizeStoredIds() {
+        const ids = [...state.ids];
+        try {
+            await loadItems(ids);
+        } catch {
+            return;
+        }
+
+        let changed = false;
+        for (const id of ids) {
+            const seriesId = parentSeriesId(state.itemCache.get(id));
+            if (!seriesId || seriesId === id) continue;
+            state.aliases.set(id, seriesId);
+            state.ids.delete(id);
+            state.ids.add(seriesId);
+            changed = true;
+        }
+        if (changed) writeLocalIds();
+    }
+
     function watchlistUrl() {
         const url = new URL(location.href);
         url.searchParams.set("pw-watchlist", "1");
@@ -193,13 +236,13 @@
         if (!itemId || button?.dataset?.busy === "true") return;
         if (button) button.dataset.busy = "true";
         const sourceKey = itemId.toLowerCase();
-        const effectiveKey = state.aliases.get(sourceKey) || sourceKey;
+        const effectiveKey = await canonicalClientId(itemId);
         const desired = !state.ids.has(effectiveKey);
         if (desired) state.ids.add(effectiveKey); else state.ids.delete(effectiveKey);
         writeLocalIds();
         syncButtons(itemId);
         try {
-            const result = await apiJson(`/PunisherWatchlist/items/${encodeURIComponent(itemId)}`, desired ? "PUT" : "DELETE");
+            const result = await apiJson(`/PunisherWatchlist/items/${encodeURIComponent(effectiveKey)}`, desired ? "PUT" : "DELETE");
             const active = result?.InWatchlist ?? result?.inWatchlist ?? desired;
             const canonicalKey = String(result?.ItemId ?? result?.itemId ?? effectiveKey).toLowerCase();
             state.aliases.set(sourceKey, canonicalKey);
@@ -491,6 +534,7 @@
             page.innerHTML = `<div class="pw-watchlist-heading"><h2>Watchlist</h2></div><div class="pw-watchlist-empty pw-watchlist-load-error">The Watchlist could not be loaded. Please try again.</div>`;
             return;
         }
+        await normalizeStoredIds();
         const ids = [...state.ids];
         if (!ids.length) {
             page.innerHTML = `<div class="pw-watchlist-heading"><h2>Watchlist</h2></div><div class="pw-watchlist-empty">Your Watchlist is empty. Use the eye button on a movie, series, or episode to add it.</div>`;

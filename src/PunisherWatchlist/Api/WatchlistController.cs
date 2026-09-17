@@ -188,16 +188,14 @@ public sealed class WatchlistController : ControllerBase
         BaseItem? item = _library.GetItemById<BaseItem>(itemId, userId);
         if (item is Episode episode)
         {
-            return episode.Series is null
-                ? item
-                : _library.GetItemById<BaseItem>(episode.Series.Id, userId) ?? episode.Series;
+            Guid seriesId = episode.SeriesId == Guid.Empty ? episode.FindSeriesId() : episode.SeriesId;
+            return seriesId == Guid.Empty ? item : _library.GetItemById<BaseItem>(seriesId, userId) ?? item;
         }
 
         if (item is Season season)
         {
-            return season.Series is null
-                ? item
-                : _library.GetItemById<BaseItem>(season.Series.Id, userId) ?? season.Series;
+            Guid seriesId = season.SeriesId == Guid.Empty ? season.FindSeriesId() : season.SeriesId;
+            return seriesId == Guid.Empty ? item : _library.GetItemById<BaseItem>(seriesId, userId) ?? item;
         }
 
         return item;

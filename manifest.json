@@ -9,6 +9,14 @@
     "imageUrl": "https://raw.githubusercontent.com/PunikaSama/PunisherWatchlist/main/PunisherWatchlist.png",
     "versions": [
       {
+        "version": "1.0.8.0",
+        "changelog": "Fixes additions disappearing after the server refresh. Episode and season cards are resolved to SeriesId in the client before saving, server and browser state are merged again, cached episode entries are normalized to their series, and server-side parent resolution no longer depends on loading the Series navigation property.",
+        "targetAbi": "12.1.0.0",
+        "sourceUrl": "https://github.com/PunikaSama/PunisherWatchlist/releases/download/v1.0.8.0/PunisherWatchlist_1.0.8.0.zip",
+        "checksum": "542f9938cf656d564e7775d0a8d60de2",
+        "timestamp": "2026-09-18 01:45:00"
+      },
+      {
         "version": "1.0.7.0",
         "changelog": "Adding an episode or season now resolves and stores its parent series, so the complete anime or show appears in Watchlist. Existing episode entries are migrated automatically to their series, and the client follows the canonical series ID returned by the server.",
         "targetAbi": "12.1.0.0",
