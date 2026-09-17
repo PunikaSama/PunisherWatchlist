@@ -1,5 +1,7 @@
 # PunisherWatchlist
 
+![PunisherWatchlist banner](PunisherWatchlist.png)
+
 PunisherWatchlist adds a separate, personal Watchlist to Jellyfin Web. Movies, series, and episodes receive an eye button beside the familiar Jellyfin controls. Press the eye to add a title; press it again to remove the title. A **Watchlist** tab on the Jellyfin home screen shows all saved titles for the signed-in user.
 
 ## Features

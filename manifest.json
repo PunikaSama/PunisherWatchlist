@@ -6,7 +6,7 @@
     "description": "Adds eye buttons to movies, series, and episodes plus a personal Watchlist tab on the Jellyfin home screen.",
     "owner": "PunisherSama",
     "category": "General",
-    "imageUrl": "https://raw.githubusercontent.com/PunikaSama/PunisherWatchlist/main/logo.svg",
+    "imageUrl": "https://raw.githubusercontent.com/PunikaSama/PunisherWatchlist/main/PunisherWatchlist.png",
     "versions": [
       {
         "version": "1.0.0.0",
