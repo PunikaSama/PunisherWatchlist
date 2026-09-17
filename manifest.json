@@ -9,6 +9,14 @@
     "imageUrl": "https://raw.githubusercontent.com/PunikaSama/PunisherWatchlist/main/PunisherWatchlist.png",
     "versions": [
       {
+        "version": "1.0.9.0",
+        "changelog": "Fixes an item-ID format mismatch that caused saved Watchlist entries to render as an empty tab. The API now returns Jellyfin's compact GUID format, and the client normalizes dashed and compact IDs before storage, cache lookup, aliases, button state, and metadata rendering. Adds a regression test for this exact failure.",
+        "targetAbi": "12.1.0.0",
+        "sourceUrl": "https://github.com/PunikaSama/PunisherWatchlist/releases/download/v1.0.9.0/PunisherWatchlist_1.0.9.0.zip",
+        "checksum": "ab99a51c0015233ba55dc869f9942903",
+        "timestamp": "2026-09-18 02:10:00"
+      },
+      {
         "version": "1.0.8.0",
         "changelog": "Fixes additions disappearing after the server refresh. Episode and season cards are resolved to SeriesId in the client before saving, server and browser state are merged again, cached episode entries are normalized to their series, and server-side parent resolution no longer depends on loading the Series navigation property.",
         "targetAbi": "12.1.0.0",

@@ -71,7 +71,7 @@ public sealed class WatchlistController : ControllerBase
             canonicalIds.Add(item.Id);
         }
 
-        string[] visible = canonicalIds.Distinct().Select(id => id.ToString("D")).ToArray();
+        string[] visible = canonicalIds.Distinct().Select(id => id.ToString("N")).ToArray();
         return Ok(new WatchlistPayload { ItemIds = visible });
     }
 
@@ -88,7 +88,7 @@ public sealed class WatchlistController : ControllerBase
 
         BaseItem? item = ResolveWatchlistItem(itemId, user.Id);
         Guid canonicalId = item?.Id ?? itemId;
-        return Ok(new WatchlistState { ItemId = canonicalId.ToString("D"), InWatchlist = _store.Contains(user.Id, canonicalId) });
+        return Ok(new WatchlistState { ItemId = canonicalId.ToString("N"), InWatchlist = _store.Contains(user.Id, canonicalId) });
     }
 
     [HttpPost("items/{itemId:guid}/toggle")]
@@ -121,7 +121,7 @@ public sealed class WatchlistController : ControllerBase
             inWatchlist = true;
         }
 
-        return Ok(new WatchlistState { ItemId = canonicalId.ToString("D"), InWatchlist = inWatchlist });
+        return Ok(new WatchlistState { ItemId = canonicalId.ToString("N"), InWatchlist = inWatchlist });
     }
 
     [HttpPut("items/{itemId:guid}")]
@@ -142,7 +142,7 @@ public sealed class WatchlistController : ControllerBase
         }
 
         _store.Add(user.Id, item.Id);
-        return Ok(new WatchlistState { ItemId = item.Id.ToString("D"), InWatchlist = true });
+        return Ok(new WatchlistState { ItemId = item.Id.ToString("N"), InWatchlist = true });
     }
 
     [HttpDelete("items/{itemId:guid}")]
@@ -159,7 +159,7 @@ public sealed class WatchlistController : ControllerBase
         BaseItem? item = ResolveWatchlistItem(itemId, user.Id);
         Guid canonicalId = item?.Id ?? itemId;
         _store.Remove(user.Id, canonicalId);
-        return Ok(new WatchlistState { ItemId = canonicalId.ToString("D"), InWatchlist = false });
+        return Ok(new WatchlistState { ItemId = canonicalId.ToString("N"), InWatchlist = false });
     }
 
     private ActionResult Embedded(string resourceName, string contentType)

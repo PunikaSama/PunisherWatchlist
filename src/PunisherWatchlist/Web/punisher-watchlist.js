@@ -1,8 +1,8 @@
 (function () {
     "use strict";
 
-    if (window.__punisherWatchlistV108) return;
-    window.__punisherWatchlistV108 = true;
+    if (window.__punisherWatchlistV109) return;
+    window.__punisherWatchlistV109 = true;
 
     const isWatchlistRoute = () => location.search.includes("pw-watchlist=1") || location.hash.includes("pw-watchlist=1");
     if (isWatchlistRoute()) document.documentElement.classList.add("pw-watchlist-route-active");
@@ -47,6 +47,10 @@
         return response.status === 204 ? null : response.json();
     }
 
+    function normalizeId(value) {
+        return String(value || "").replace(/-/g, "").toLowerCase();
+    }
+
     function localStorageKey() {
         return `punisher-watchlist:${location.origin}:${state.userId || "anonymous"}`;
     }
@@ -54,7 +58,7 @@
     function readLocalIds() {
         try {
             const value = JSON.parse(localStorage.getItem(localStorageKey()) || "[]");
-            return Array.isArray(value) ? value.map(id => String(id).toLowerCase()).filter(Boolean) : [];
+            return Array.isArray(value) ? value.map(normalizeId).filter(Boolean) : [];
         } catch {
             return [];
         }
@@ -84,7 +88,7 @@
             state.loading = apiJson("/PunisherWatchlist/items")
                 .then(payload => {
                     const ids = payload?.ItemIds || payload?.itemIds || [];
-                    state.ids = new Set([...ids.map(id => String(id).toLowerCase()), ...readLocalIds()]);
+                    state.ids = new Set([...ids.map(normalizeId), ...readLocalIds()].filter(Boolean));
                     state.loaded = true;
                     writeLocalIds();
                     syncAllButtons();
@@ -135,7 +139,7 @@
     }
 
     async function loadItems(ids) {
-        const missing = [...new Set(ids.filter(Boolean))].filter(id => !state.itemCache.has(id.toLowerCase()));
+        const missing = [...new Set(ids.map(normalizeId).filter(Boolean))].filter(id => !state.itemCache.has(id));
         if (!missing.length) return;
         const result = await apiJson("/Items", "GET", {
             UserId: state.userId,
@@ -145,7 +149,7 @@
             EnableUserData: true
         });
         for (const item of result?.Items || result?.items || []) {
-            state.itemCache.set(String(item.Id || item.id).toLowerCase(), item);
+            state.itemCache.set(normalizeId(item.Id || item.id), item);
         }
     }
 
@@ -156,11 +160,11 @@
     function parentSeriesId(item) {
         const type = item?.Type || item?.type;
         if (type !== "Episode" && type !== "Season") return "";
-        return String(item?.SeriesId || item?.seriesId || "").toLowerCase();
+        return normalizeId(item?.SeriesId || item?.seriesId);
     }
 
     async function canonicalClientId(itemId) {
-        const sourceKey = itemId.toLowerCase();
+        const sourceKey = normalizeId(itemId);
         const known = state.aliases.get(sourceKey);
         if (known) return known;
         try {
@@ -235,7 +239,7 @@
     async function toggle(itemId, button) {
         if (!itemId || button?.dataset?.busy === "true") return;
         if (button) button.dataset.busy = "true";
-        const sourceKey = itemId.toLowerCase();
+        const sourceKey = normalizeId(itemId);
         const effectiveKey = await canonicalClientId(itemId);
         const desired = !state.ids.has(effectiveKey);
         if (desired) state.ids.add(effectiveKey); else state.ids.delete(effectiveKey);
@@ -244,7 +248,7 @@
         try {
             const result = await apiJson(`/PunisherWatchlist/items/${encodeURIComponent(effectiveKey)}`, desired ? "PUT" : "DELETE");
             const active = result?.InWatchlist ?? result?.inWatchlist ?? desired;
-            const canonicalKey = String(result?.ItemId ?? result?.itemId ?? effectiveKey).toLowerCase();
+            const canonicalKey = normalizeId(result?.ItemId ?? result?.itemId ?? effectiveKey);
             state.aliases.set(sourceKey, canonicalKey);
             state.ids.delete(sourceKey);
             state.ids.delete(effectiveKey);
@@ -263,7 +267,7 @@
     }
 
     function updateButton(button, itemId) {
-        const sourceKey = itemId.toLowerCase();
+        const sourceKey = normalizeId(itemId);
         const active = state.ids.has(state.aliases.get(sourceKey) || sourceKey);
         button.classList.toggle("pw-watchlist-active", active);
         button.setAttribute("aria-pressed", String(active));
@@ -277,7 +281,7 @@
 
     function syncButtons(itemId) {
         document.querySelectorAll(".pw-watchlist-button[data-pw-item-id]").forEach(button => {
-            if (button.dataset.pwItemId?.toLowerCase() === itemId.toLowerCase()) updateButton(button, itemId);
+            if (normalizeId(button.dataset.pwItemId) === normalizeId(itemId)) updateButton(button, itemId);
         });
     }
 
@@ -353,10 +357,10 @@
         const itemId = currentDetailItemId();
         if (!host || !itemId) return;
         await loadItems([itemId]);
-        const item = state.itemCache.get(itemId.toLowerCase());
+        const item = state.itemCache.get(normalizeId(itemId));
         if (!isSupported(item)) return;
         const existing = host.querySelector(".pw-watchlist-detail-button");
-        if (existing?.dataset?.pwItemId === itemId) {
+        if (normalizeId(existing?.dataset?.pwItemId) === normalizeId(itemId)) {
             updateButton(existing, itemId);
             return;
         }
