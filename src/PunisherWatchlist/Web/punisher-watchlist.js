@@ -1,8 +1,8 @@
 (function () {
     "use strict";
 
-    if (window.__punisherWatchlistV113) return;
-    window.__punisherWatchlistV113 = true;
+    if (window.__punisherWatchlistV114) return;
+    window.__punisherWatchlistV114 = true;
 
     const isWatchlistRoute = () => location.search.includes("pw-watchlist=1") || location.hash.includes("pw-watchlist=1");
     if (isWatchlistRoute()) document.documentElement.classList.add("pw-watchlist-route-active");
@@ -21,7 +21,8 @@
         watchlistOpen: false,
         watchlistRequested: isWatchlistRoute(),
         patchedApi: null,
-        originalGetItems: null
+        originalGetItems: null,
+        providerActive: false
     };
 
     const eyeSvg = active => `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5c-5.4 0-9.3 4.2-10.5 6.3a1.4 1.4 0 0 0 0 1.4C2.7 14.8 6.6 19 12 19s9.3-4.2 10.5-6.3a1.4 1.4 0 0 0 0-1.4C21.3 9.2 17.4 5 12 5Zm0 11.3A4.3 4.3 0 1 1 12 7.7a4.3 4.3 0 0 1 0 8.6Zm0-2.2a2.1 2.1 0 1 0 0-4.2 2.1 2.1 0 0 0 0 4.2Z"${active ? " fill=\"currentColor\"" : ""}/></svg>`;
@@ -53,6 +54,10 @@
         delete result.IsFavorite;
         delete result.isFavorite;
         return result;
+    }
+
+    function shouldUseWatchlistProvider(watchlistOpen, providerActive) {
+        return Boolean(watchlistOpen && providerActive);
     }
 
     function localStorageKey() {
@@ -488,7 +493,7 @@
         state.patchedApi = api;
         state.originalGetItems = original;
         api.getItems = (userId, options = {}) => {
-            if (!state.watchlistOpen || !isStandaloneWatchlistRoute()) return original(userId, options);
+            if (!shouldUseWatchlistProvider(state.watchlistOpen, state.providerActive)) return original(userId, options);
             const ids = [...state.ids];
             if (!ids.length) return Promise.resolve({ Items: [], TotalRecordCount: 0, StartIndex: 0 });
             return original(userId, nativeWatchlistOptions(options, ids));
@@ -529,10 +534,13 @@
             const loaded = await loadState(true);
             if (!loaded) return;
             await normalizeStoredIds();
+            state.providerActive = true;
             installNativeItemsProvider();
             const targetHash = watchlistHash();
             if (location.hash !== targetHash) location.hash = targetHash.slice(1);
             else refreshWatchlistView();
+            window.setTimeout(() => refreshWatchlistView(), 250);
+            window.setTimeout(() => refreshWatchlistView(), 700);
             syncWatchlistNavigation();
         } else {
             syncWatchlistNavigation();
@@ -545,6 +553,7 @@
         if (clearUrl) removeWatchlistUrlMarker();
         if (!state.watchlistOpen) return;
         state.watchlistOpen = false;
+        state.providerActive = false;
         document.querySelectorAll(".pw-watchlist-tab").forEach(tab => {
             tab.classList.remove("emby-tab-button-active");
             tab.classList.remove("pw-watchlist-nav-active");

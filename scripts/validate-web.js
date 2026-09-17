@@ -6,7 +6,7 @@ const script = fs.readFileSync(path.join(root, 'src', 'PunisherWatchlist', 'Web'
 const style = fs.readFileSync(path.join(root, 'src', 'PunisherWatchlist', 'Web', 'punisher-watchlist.css'), 'utf8');
 const controller = fs.readFileSync(path.join(root, 'src', 'PunisherWatchlist', 'Api', 'WatchlistController.cs'), 'utf8');
 
-for (const token of ['PunisherWatchlist/items', 'pw-watchlist-tab', 'pw-watchlist-card-button', 'pw-watchlist-detail-button', 'MuiAppBar-root', 'favoriteButton', 'pw-watchlist-card-button-adjacent', 'pw-watchlist-drawer-link', 'placeAfterFavorites', 'document.querySelectorAll(".card")', 'localStorageKey', 'pw-watchlist-route-active', 'isLibraryFolderCard', 'state.aliases', 'canonicalKey', 'canonicalClientId', 'normalizeStoredIds', '"Season"', 'const seriesId = parentSeriesId(item)', 'state.aliases.set(normalizeId(itemId), seriesId)', 'installNativeItemsProvider', 'api.getItems =', 'function watchlistHash()', 'function isStandaloneWatchlistRoute()', 'type: "Movie,Series"', 'container.refreshItems()', 'other.classList.remove("emby-tab-button-active", "Mui-selected", "navMenuOption-selected", "selected", "buttonActive", "pw-watchlist-nav-active")']) {
+for (const token of ['PunisherWatchlist/items', 'pw-watchlist-tab', 'pw-watchlist-card-button', 'pw-watchlist-detail-button', 'MuiAppBar-root', 'favoriteButton', 'pw-watchlist-card-button-adjacent', 'pw-watchlist-drawer-link', 'placeAfterFavorites', 'document.querySelectorAll(".card")', 'localStorageKey', 'pw-watchlist-route-active', 'isLibraryFolderCard', 'state.aliases', 'canonicalKey', 'canonicalClientId', 'normalizeStoredIds', '"Season"', 'const seriesId = parentSeriesId(item)', 'state.aliases.set(normalizeId(itemId), seriesId)', 'installNativeItemsProvider', 'api.getItems =', 'function watchlistHash()', 'function isStandaloneWatchlistRoute()', 'type: "Movie,Series"', 'container.refreshItems()', 'providerActive: false', 'state.providerActive = true', 'shouldUseWatchlistProvider(state.watchlistOpen, state.providerActive)', 'window.setTimeout(() => refreshWatchlistView(), 700)', 'other.classList.remove("emby-tab-button-active", "Mui-selected", "navMenuOption-selected", "selected", "buttonActive", "pw-watchlist-nav-active")']) {
     if (!script.includes(token)) throw new Error(`Missing client feature: ${token}`);
 }
 for (const token of ['.pw-watchlist-button', '.pw-watchlist-card-button-adjacent:is(', '.card:hover .pw-watchlist-card-button', '@media (hover: none)', '.pw-watchlist-detail-button.pw-watchlist-active']) {
@@ -32,6 +32,10 @@ function extractFunction(name) {
 }
 
 const nativeWatchlistOptions = extractFunction('nativeWatchlistOptions');
+const shouldUseWatchlistProvider = extractFunction('shouldUseWatchlistProvider');
+if (!shouldUseWatchlistProvider(true, true) || shouldUseWatchlistProvider(true, false) || shouldUseWatchlistProvider(false, true)) {
+    throw new Error('Standalone Watchlist provider activation failed.');
+}
 const nativeOptions = nativeWatchlistOptions({ Filters: 'IsFavorite', IsFavorite: true, IncludeItemTypes: 'Series', Limit: 20 }, ['one', 'two']);
 if (nativeOptions.Ids !== 'one,two' || nativeOptions.IncludeItemTypes !== 'Series' || nativeOptions.Limit !== 20 || 'Filters' in nativeOptions || 'IsFavorite' in nativeOptions) {
     throw new Error('Watchlist IDs are not mapped safely into the native Favorites query.');

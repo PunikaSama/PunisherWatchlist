@@ -9,12 +9,12 @@
     "imageUrl": "https://raw.githubusercontent.com/PunikaSama/PunisherWatchlist/main/PunisherWatchlist.png",
     "versions": [
       {
-        "version": "1.0.13.0",
-        "changelog": "Moves Watchlist to its own standalone Jellyfin list route instead of opening the native Favorites tab internally. The page remains fully native through Jellyfin's list, card, hover-menu, sorting, paging, metadata, and responsive components while Favorites and Watchlist are now completely independent.",
+        "version": "1.0.14.0",
+        "changelog": "Fixes the standalone Watchlist initially showing every media item. A dedicated provider state now constrains all native list requests to saved Watchlist IDs independently of route timing, with controlled native-list refreshes after navigation to replace any early unfiltered request.",
         "targetAbi": "12.1.0.0",
-        "sourceUrl": "https://github.com/PunikaSama/PunisherWatchlist/releases/download/v1.0.13.0/PunisherWatchlist_1.0.13.0.zip",
-        "checksum": "7c3b01a5d02b24a17f9b340db1e5d036",
-        "timestamp": "2026-09-18 04:30:00"
+        "sourceUrl": "https://github.com/PunikaSama/PunisherWatchlist/releases/download/v1.0.14.0/PunisherWatchlist_1.0.14.0.zip",
+        "checksum": "4de2a923dee2c4c4170c61de473d4826",
+        "timestamp": "2026-09-18 05:00:00"
       }
     ]
   }
