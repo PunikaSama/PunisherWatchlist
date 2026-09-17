@@ -1,8 +1,8 @@
 (function () {
     "use strict";
 
-    if (window.__punisherWatchlistV101) return;
-    window.__punisherWatchlistV101 = true;
+    if (window.__punisherWatchlistV102) return;
+    window.__punisherWatchlistV102 = true;
 
     const supportedTypes = new Set(["Movie", "Series", "Episode"]);
     const state = {
@@ -150,11 +150,11 @@
         button.type = "button";
         button.className = detail
             ? "detailButton emby-button button-flat pw-watchlist-button pw-watchlist-detail-button"
-            : "pw-watchlist-button pw-watchlist-card-button";
+            : "paper-icon-button-light cardOverlayButton cardOverlayButton-hover itemAction pw-watchlist-button pw-watchlist-card-button";
         button.dataset.pwItemId = itemId;
         button.innerHTML = detail
             ? `<span class="detailButton-content"><span class="pw-watchlist-icon"></span><span class="pw-watchlist-label"></span></span>`
-            : `<span class="pw-watchlist-icon"></span>`;
+            : `<span class="cardOverlayButtonIcon cardOverlayButtonIcon-hover pw-watchlist-icon"></span>`;
         updateButton(button, itemId);
         button.addEventListener("click", event => {
             event.preventDefault();
@@ -182,15 +182,20 @@
         const button = makeButton(itemId);
         const favorite = favoriteButton(card);
         if (favorite?.parentElement) {
+            favorite.classList.forEach(className => {
+                if (!/favorite|rating|played/i.test(className)) button.classList.add(className);
+            });
             button.classList.add("pw-watchlist-card-button-adjacent");
             favorite.insertAdjacentElement("afterend", button);
             return;
         }
 
-        const actions = card.querySelector(".cardOverlayButtons, .cardOverlayButtonContainer, .cardIndicators");
+        const actions = card.querySelector(".cardOverlayButton-br, .cardOverlayButtons, .cardOverlayButtonContainer");
         if (actions) {
             button.classList.add("pw-watchlist-card-button-adjacent");
-            actions.appendChild(button);
+            const moreButton = actions.lastElementChild;
+            if (moreButton) actions.insertBefore(button, moreButton);
+            else actions.appendChild(button);
             return;
         }
 
@@ -262,7 +267,7 @@
         document.querySelectorAll(".MuiBottomNavigation-root, [class*='MuiBottomNavigation-root']").forEach(host => {
             if (visible(host)) hosts.add(host);
         });
-        document.querySelectorAll("header nav, .skinHeader nav, .MuiDrawer-root nav, [class*='MuiDrawer-root'] nav").forEach(host => {
+        document.querySelectorAll("header nav, .skinHeader nav").forEach(host => {
             if (visible(host) && host.querySelectorAll("a[href], button").length >= 2) hosts.add(host);
         });
 
@@ -277,7 +282,8 @@
             while (host && host !== appBar && host.querySelectorAll("a[href], button").length < 2) host = host.parentElement;
             if (host) hosts.add(host);
         });
-        return [...hosts];
+        const candidates = [...hosts];
+        return candidates.filter(host => !candidates.some(other => other !== host && host.contains(other)));
     }
 
     function makeNavigationLink(host) {
@@ -287,26 +293,74 @@
         tab.className = `${sample?.className || "emby-tab-button emby-button"} pw-watchlist-tab pw-watchlist-nav-link`;
         tab.setAttribute("role", sample?.getAttribute("role") || "tab");
         tab.innerHTML = `<span class="pw-watchlist-nav-icon">${eyeSvg(true)}</span><span class="pw-watchlist-nav-label">Watchlist</span>`;
-        tab.addEventListener("click", event => {
-            event.preventDefault();
-            state.watchlistRequested = true;
-            if (!location.hash.includes("pw-watchlist=1")) location.hash = "/home.html?pw-watchlist=1";
-            schedule();
-        });
         return tab;
+    }
+
+    function normalizedLabel(element) {
+        return (element?.textContent || "").replace(/\s+/g, " ").trim().toLowerCase();
+    }
+
+    function favoriteNavigationItem(host) {
+        return [...host.querySelectorAll("a[href], button")].find(item => /^(favoriten|favorites)$/.test(normalizedLabel(item))) || null;
+    }
+
+    function placeAfterFavorites(host, tab) {
+        const favorite = favoriteNavigationItem(host);
+        if (favorite) {
+            if (favorite.nextElementSibling !== tab) favorite.insertAdjacentElement("afterend", tab);
+        } else if (tab.parentElement !== host) {
+            host.appendChild(tab);
+        }
+    }
+
+    function activateWatchlistRoute() {
+        state.watchlistRequested = true;
+        if (!location.hash.includes("pw-watchlist=1")) location.hash = "/home.html?pw-watchlist=1";
+        document.querySelector(".MuiBackdrop-root, [class*='MuiBackdrop-root']")?.click?.();
+        schedule();
     }
 
     function ensureWatchlistTab() {
         for (const host of navigationHosts()) {
-            let tab = host.querySelector(":scope > .pw-watchlist-tab");
+            let tab = host.querySelector(".pw-watchlist-tab:not(.pw-watchlist-drawer-link)");
             if (!tab) {
                 tab = makeNavigationLink(host);
-                host.appendChild(tab);
+                tab.addEventListener("click", activateWatchlistRoute);
             }
+            placeAfterFavorites(host, tab);
             tab.classList.toggle("emby-tab-button-active", state.watchlistOpen);
             tab.classList.toggle("pw-watchlist-nav-active", state.watchlistOpen);
             tab.setAttribute("aria-selected", String(state.watchlistOpen));
         }
+        ensureDrawerLink();
+    }
+
+    function ensureDrawerLink() {
+        document.querySelectorAll(".MuiDrawer-root, [class*='MuiDrawer-root'], .mainDrawer").forEach(drawer => {
+            if (!visible(drawer)) return;
+            const favorite = favoriteNavigationItem(drawer);
+            if (!favorite?.parentElement) return;
+            let link = drawer.querySelector(".pw-watchlist-drawer-link");
+            if (!link) {
+                link = favorite.cloneNode(true);
+                link.querySelectorAll("[id]").forEach(element => element.removeAttribute("id"));
+                link.classList.add("pw-watchlist-tab", "pw-watchlist-drawer-link");
+                link.classList.remove("Mui-selected", "navMenuOption-selected", "selected");
+                link.href = "#/home.html?pw-watchlist=1";
+                link.removeAttribute("aria-current");
+                const icon = link.querySelector(".MuiListItemIcon-root, [class*='MuiListItemIcon-root'], .listItemIcon");
+                if (icon) icon.innerHTML = `<span class="pw-watchlist-nav-icon">${eyeSvg(true)}</span>`;
+                const label = link.querySelector(".MuiListItemText-primary, [class*='MuiListItemText-primary'], .listItemBodyText");
+                if (label) label.textContent = "Watchlist";
+                link.addEventListener("click", event => {
+                    event.preventDefault();
+                    activateWatchlistRoute();
+                });
+            }
+            if (favorite.nextElementSibling !== link) favorite.insertAdjacentElement("afterend", link);
+            link.classList.toggle("pw-watchlist-nav-active", state.watchlistOpen);
+            link.setAttribute("aria-selected", String(state.watchlistOpen));
+        });
     }
 
     async function openWatchlist() {
@@ -315,7 +369,7 @@
             state.watchlistRequested = true;
             return;
         }
-        const needsRender = !state.watchlistOpen || !home.parentElement?.querySelector(":scope > .pw-watchlist-page");
+        const needsRender = !state.watchlistOpen || !home.querySelector(":scope > .pw-watchlist-page");
         state.watchlistOpen = true;
         state.watchlistRequested = true;
         home.classList.add("pw-watchlist-home-hidden");
@@ -331,7 +385,7 @@
                 tab.setAttribute("aria-selected", "true");
             }
         });
-        if (needsRender) await renderWatchlist();
+        if (needsRender) await renderWatchlist(home);
     }
 
     function closeWatchlist() {
@@ -347,14 +401,13 @@
         });
     }
 
-    async function renderWatchlist() {
-        const home = homeContainer();
+    async function renderWatchlist(home = homeContainer()) {
         if (!home) return;
-        let page = home.parentElement?.querySelector(":scope > .pw-watchlist-page");
+        let page = home.querySelector(":scope > .pw-watchlist-page");
         if (!page) {
             page = document.createElement("section");
             page.className = "pw-watchlist-page";
-            home.insertAdjacentElement("afterend", page);
+            home.appendChild(page);
         }
         page.innerHTML = "<div class='pw-watchlist-heading'><h2>Watchlist</h2><span>Loading…</span></div>";
         await loadState(true);

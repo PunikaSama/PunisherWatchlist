@@ -9,6 +9,14 @@
     "imageUrl": "https://raw.githubusercontent.com/PunikaSama/PunisherWatchlist/main/PunisherWatchlist.png",
     "versions": [
       {
+        "version": "1.0.2.0",
+        "changelog": "Places Watchlist directly after Favorites in the desktop primary navigation and adds it directly below Favorites in the mobile drawer. Fixes the empty Watchlist page, preserves PunisherFinTheme backgrounds, renders added movies, series, and episodes, and makes the card eye control transparent like Jellyfin's native overlay actions.",
+        "targetAbi": "12.1.0.0",
+        "sourceUrl": "https://github.com/PunikaSama/PunisherWatchlist/releases/download/v1.0.2.0/PunisherWatchlist_1.0.2.0.zip",
+        "checksum": "77c58f9ed2a4f7ca4af8649cc86952ee",
+        "timestamp": "2026-09-17 23:40:17"
+      },
+      {
         "version": "1.0.1.0",
         "changelog": "Adds the Watchlist entry to Jellyfin 12's modern top navigation and mobile navigation. Moves card eye controls beside Jellyfin's favorite heart and only reveals them on card hover or keyboard focus on desktop while keeping them accessible on touch devices.",
         "targetAbi": "12.1.0.0",
