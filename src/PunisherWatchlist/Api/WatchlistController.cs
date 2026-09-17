@@ -116,14 +116,11 @@ public sealed class WatchlistController : ControllerBase
 
     private Jellyfin.Database.Implementations.Entities.User? CurrentUser()
     {
-        string? id = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (Guid.TryParse(id, out Guid userId))
-        {
-            return _users.GetUserById(userId);
-        }
-
-        string? name = User.Identity?.Name;
-        return string.IsNullOrWhiteSpace(name) ? null : _users.GetUserByName(name);
+        string? id = User.Claims
+            .FirstOrDefault(claim => claim.Type.Equals("Jellyfin-UserId", StringComparison.OrdinalIgnoreCase))?
+            .Value;
+        id ??= User.FindFirstValue(ClaimTypes.NameIdentifier);
+        return Guid.TryParse(id, out Guid userId) ? _users.GetUserById(userId) : null;
     }
 
     private static bool Supported(BaseItemKind kind)

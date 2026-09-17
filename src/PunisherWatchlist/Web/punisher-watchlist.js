@@ -1,8 +1,8 @@
 (function () {
     "use strict";
 
-    if (window.__punisherWatchlistV102) return;
-    window.__punisherWatchlistV102 = true;
+    if (window.__punisherWatchlistV103) return;
+    window.__punisherWatchlistV103 = true;
 
     const supportedTypes = new Set(["Movie", "Series", "Episode"]);
     const state = {
@@ -119,7 +119,8 @@
             syncButtons(itemId);
             document.dispatchEvent(new CustomEvent("punisherwatchlistchange", { detail: { itemId, active } }));
             if (state.watchlistOpen) await renderWatchlist();
-        } catch {
+        } catch (error) {
+            console.error("PunisherWatchlist could not update the item.", error);
             button?.classList.add("pw-watchlist-error");
             window.setTimeout(() => button?.classList.remove("pw-watchlist-error"), 900);
         } finally {
@@ -154,7 +155,7 @@
         button.dataset.pwItemId = itemId;
         button.innerHTML = detail
             ? `<span class="detailButton-content"><span class="pw-watchlist-icon"></span><span class="pw-watchlist-label"></span></span>`
-            : `<span class="cardOverlayButtonIcon cardOverlayButtonIcon-hover pw-watchlist-icon"></span>`;
+            : `<span class="cardOverlayButtonIcon cardOverlayButtonIcon-hover pw-watchlist-icon" aria-hidden="true"></span>`;
         updateButton(button, itemId);
         button.addEventListener("click", event => {
             event.preventDefault();
@@ -251,7 +252,7 @@
     }
 
     function ensureCardButtons() {
-        document.querySelectorAll(".homeSectionsContainer .card, .libraryPage .card, #itemDetailPage:not(.hide) .card").forEach(queueCard);
+        document.querySelectorAll(".card").forEach(queueCard);
     }
 
     function homeContainer() {
@@ -289,7 +290,7 @@
     function makeNavigationLink(host) {
         const sample = host.querySelector("a[href]:not(.pft-brand-button), button:not(.pw-watchlist-tab)");
         const tab = document.createElement("a");
-        tab.href = "#/home.html?pw-watchlist=1";
+        tab.href = "#/home?pw-watchlist=1";
         tab.className = `${sample?.className || "emby-tab-button emby-button"} pw-watchlist-tab pw-watchlist-nav-link`;
         tab.setAttribute("role", sample?.getAttribute("role") || "tab");
         tab.innerHTML = `<span class="pw-watchlist-nav-icon">${eyeSvg(true)}</span><span class="pw-watchlist-nav-label">Watchlist</span>`;
@@ -315,7 +316,7 @@
 
     function activateWatchlistRoute() {
         state.watchlistRequested = true;
-        if (!location.hash.includes("pw-watchlist=1")) location.hash = "/home.html?pw-watchlist=1";
+        if (!location.hash.includes("pw-watchlist=1")) location.hash = "/home?pw-watchlist=1";
         document.querySelector(".MuiBackdrop-root, [class*='MuiBackdrop-root']")?.click?.();
         schedule();
     }
@@ -346,7 +347,7 @@
                 link.querySelectorAll("[id]").forEach(element => element.removeAttribute("id"));
                 link.classList.add("pw-watchlist-tab", "pw-watchlist-drawer-link");
                 link.classList.remove("Mui-selected", "navMenuOption-selected", "selected");
-                link.href = "#/home.html?pw-watchlist=1";
+                link.href = "#/home?pw-watchlist=1";
                 link.removeAttribute("aria-current");
                 const icon = link.querySelector(".MuiListItemIcon-root, [class*='MuiListItemIcon-root'], .listItemIcon");
                 if (icon) icon.innerHTML = `<span class="pw-watchlist-nav-icon">${eyeSvg(true)}</span>`;
@@ -409,8 +410,12 @@
             page.className = "pw-watchlist-page";
             home.appendChild(page);
         }
-        page.innerHTML = "<div class='pw-watchlist-heading'><h2>Watchlist</h2><span>Loading…</span></div>";
-        await loadState(true);
+        page.innerHTML = "<div class='pw-watchlist-heading'><h2>Watchlist</h2><span>Loading&hellip;</span></div>";
+        const loaded = await loadState(true);
+        if (!loaded) {
+            page.innerHTML = `<div class="pw-watchlist-heading"><h2>Watchlist</h2></div><div class="pw-watchlist-empty pw-watchlist-load-error">The Watchlist could not be loaded. Please try again.</div>`;
+            return;
+        }
         const ids = [...state.ids];
         if (!ids.length) {
             page.innerHTML = `<div class="pw-watchlist-heading"><h2>Watchlist</h2></div><div class="pw-watchlist-empty">Your Watchlist is empty. Use the eye button on a movie, series, or episode to add it.</div>`;
@@ -449,13 +454,16 @@
     async function synchronize() {
         state.api = apiClient();
         if (!state.api || !state.api.getCurrentUserId?.()) return;
-        await loadState();
         ensureWatchlistTab();
+        const wantsWatchlist = state.watchlistRequested || location.hash.includes("pw-watchlist=1");
+        if (wantsWatchlist) {
+            await openWatchlist();
+        } else {
+            await loadState();
+        }
         ensureCardButtons();
         await ensureDetailButton();
-        if (state.watchlistRequested || location.hash.includes("pw-watchlist=1")) {
-            await openWatchlist();
-        } else if (state.watchlistOpen) {
+        if (!wantsWatchlist && state.watchlistOpen) {
             const home = homeContainer();
             if (home) home.classList.add("pw-watchlist-home-hidden"); else closeWatchlist();
         }

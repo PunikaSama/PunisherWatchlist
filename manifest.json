@@ -9,6 +9,14 @@
     "imageUrl": "https://raw.githubusercontent.com/PunikaSama/PunisherWatchlist/main/PunisherWatchlist.png",
     "versions": [
       {
+        "version": "1.0.3.0",
+        "changelog": "Fixes authenticated per-user Watchlist storage on Jellyfin 12.1, opens the Watchlist through the correct modern home route without a black page, renders the loading state immediately, restores titles, adds eye controls to all supported library cards, and centers the transparent native-style eye action.",
+        "targetAbi": "12.1.0.0",
+        "sourceUrl": "https://github.com/PunikaSama/PunisherWatchlist/releases/download/v1.0.3.0/PunisherWatchlist_1.0.3.0.zip",
+        "checksum": "7103e86c9c61a0586129a3870d6c1b7f",
+        "timestamp": "2026-09-17 23:59:00"
+      },
+      {
         "version": "1.0.2.0",
         "changelog": "Places Watchlist directly after Favorites in the desktop primary navigation and adds it directly below Favorites in the mobile drawer. Fixes the empty Watchlist page, preserves PunisherFinTheme backgrounds, renders added movies, series, and episodes, and makes the card eye control transparent like Jellyfin's native overlay actions.",
         "targetAbi": "12.1.0.0",
