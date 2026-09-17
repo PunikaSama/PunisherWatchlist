@@ -1,8 +1,8 @@
 (function () {
     "use strict";
 
-    if (window.__punisherWatchlistV112) return;
-    window.__punisherWatchlistV112 = true;
+    if (window.__punisherWatchlistV113) return;
+    window.__punisherWatchlistV113 = true;
 
     const isWatchlistRoute = () => location.search.includes("pw-watchlist=1") || location.hash.includes("pw-watchlist=1");
     if (isWatchlistRoute()) document.documentElement.classList.add("pw-watchlist-route-active");
@@ -21,8 +21,7 @@
         watchlistOpen: false,
         watchlistRequested: isWatchlistRoute(),
         patchedApi: null,
-        originalGetItems: null,
-        nativeNavigation: false
+        originalGetItems: null
     };
 
     const eyeSvg = active => `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5c-5.4 0-9.3 4.2-10.5 6.3a1.4 1.4 0 0 0 0 1.4C2.7 14.8 6.6 19 12 19s9.3-4.2 10.5-6.3a1.4 1.4 0 0 0 0-1.4C21.3 9.2 17.4 5 12 5Zm0 11.3A4.3 4.3 0 1 1 12 7.7a4.3 4.3 0 0 1 0 8.6Zm0-2.2a2.1 2.1 0 1 0 0-4.2 2.1 2.1 0 0 0 0 4.2Z"${active ? " fill=\"currentColor\"" : ""}/></svg>`;
@@ -45,13 +44,6 @@
 
     function normalizeId(value) {
         return String(value || "").replace(/-/g, "").toLowerCase();
-    }
-
-    function isFavoriteItemsRequest(options) {
-        if (options?.IsFavorite === true || options?.isFavorite === true) return true;
-        const value = options?.Filters ?? options?.filters ?? "";
-        const filters = Array.isArray(value) ? value : String(value).split(",");
-        return filters.includes("IsFavorite");
     }
 
     function nativeWatchlistOptions(options, ids) {
@@ -212,10 +204,13 @@
         if (changed) writeLocalIds();
     }
 
-    function watchlistUrl() {
-        const url = new URL(location.href);
-        url.searchParams.set("pw-watchlist", "1");
-        return `${url.pathname}${url.search}${url.hash.replace(/([?&])pw-watchlist=1(&|$)/, (_match, lead, tail) => tail ? lead : "")}`;
+    function watchlistHash() {
+        const params = new URLSearchParams({
+            serverId: state.api?.serverId?.() || "",
+            type: "Movie,Series",
+            "pw-watchlist": "1"
+        });
+        return `#/list?${params}`;
     }
 
     function removeWatchlistUrlMarker() {
@@ -228,12 +223,8 @@
         history.replaceState(history.state, "", `${url.pathname}${url.search}${cleanHash}`);
     }
 
-    function isHomeRoute() {
-        return /^#\/(?:home|home\.html)(?:[?]|$)/i.test(location.hash);
-    }
-
-    function isFavoriteListRoute() {
-        return /^#\/list(?:[?]|$)/i.test(location.hash) && /[?&]isfavorite=true(?:&|$)/i.test(location.hash);
+    function isStandaloneWatchlistRoute() {
+        return /^#\/list(?:[?]|$)/i.test(location.hash) && /[?&]pw-watchlist=1(?:&|$)/i.test(location.hash);
     }
 
     async function toggle(itemId, button) {
@@ -256,7 +247,7 @@
             writeLocalIds();
             syncButtons(itemId);
             document.dispatchEvent(new CustomEvent("punisherwatchlistchange", { detail: { itemId, active } }));
-            if (state.watchlistOpen) refreshNativeWatchlist();
+            if (state.watchlistOpen) refreshWatchlistView();
         } catch (error) {
             console.error("PunisherWatchlist could not update the item.", error);
             button?.classList.add("pw-watchlist-error");
@@ -443,7 +434,6 @@
         event?.stopPropagation?.();
         state.watchlistRequested = true;
         document.documentElement.classList.add("pw-watchlist-route-active");
-        if (!isWatchlistRoute()) history.pushState({ ...(history.state || {}), punisherWatchlist: true }, "", watchlistUrl());
         document.querySelector(".MuiBackdrop-root, [class*='MuiBackdrop-root']")?.click?.();
         void openWatchlist();
     }
@@ -498,7 +488,7 @@
         state.patchedApi = api;
         state.originalGetItems = original;
         api.getItems = (userId, options = {}) => {
-            if (!state.watchlistOpen || !isFavoriteItemsRequest(options)) return original(userId, options);
+            if (!state.watchlistOpen || !isStandaloneWatchlistRoute()) return original(userId, options);
             const ids = [...state.ids];
             if (!ids.length) return Promise.resolve({ Items: [], TotalRecordCount: 0, StartIndex: 0 });
             return original(userId, nativeWatchlistOptions(options, ids));
@@ -518,32 +508,15 @@
         });
     }
 
-    function refreshNativeWatchlist(attempt = 0) {
-        const containers = [...document.querySelectorAll("#favoritesTab .itemsContainer")];
+    function refreshWatchlistView(attempt = 0) {
+        const containers = [...document.querySelectorAll(".mainAnimatedPage:not(.hide) .itemsContainer, .page:not(.hide) .itemsContainer")];
         if (!containers.length) {
-            if (state.watchlistOpen && attempt < 20) window.setTimeout(() => refreshNativeWatchlist(attempt + 1), 50);
+            if (state.watchlistOpen && attempt < 20) window.setTimeout(() => refreshWatchlistView(attempt + 1), 50);
             return;
         }
         for (const container of containers) {
-            if (typeof container.resume === "function") void container.resume({ refresh: true });
-        }
-    }
-
-    function showNativeFavorites() {
-        const favorite = navigationHosts()
-            .map(favoriteNavigationItem)
-            .find(item => item && !item.classList.contains("pw-watchlist-tab") && visible(item));
-        const favoritesPageVisible = visible(document.querySelector("#favoritesTab"));
-        if (favorite && !favoritesPageVisible) {
-            state.nativeNavigation = true;
-            favorite.click();
-            window.setTimeout(() => {
-                state.nativeNavigation = false;
-                syncWatchlistNavigation();
-            }, 0);
-        } else {
-            syncWatchlistNavigation();
-            refreshNativeWatchlist();
+            if (typeof container.refreshItems === "function") void container.refreshItems();
+            else if (typeof container.resume === "function") void container.resume({ refresh: true });
         }
     }
 
@@ -557,7 +530,10 @@
             if (!loaded) return;
             await normalizeStoredIds();
             installNativeItemsProvider();
-            showNativeFavorites();
+            const targetHash = watchlistHash();
+            if (location.hash !== targetHash) location.hash = targetHash.slice(1);
+            else refreshWatchlistView();
+            syncWatchlistNavigation();
         } else {
             syncWatchlistNavigation();
         }
@@ -606,18 +582,13 @@
         document.addEventListener("click", event => {
             const tab = event.target instanceof Element ? event.target.closest(".emby-tab-button, [role='tab'], .MuiButtonBase-root") : null;
             const isNavigation = tab && navigationHosts().some(host => host.contains(tab));
-            if (isNavigation && !tab.classList.contains("pw-watchlist-tab") && !state.nativeNavigation) closeWatchlist();
+            if (isNavigation && !tab.classList.contains("pw-watchlist-tab")) closeWatchlist();
         }, true);
         document.addEventListener("viewshow", () => {
             if (!isWatchlistRoute()) closeWatchlist(false);
             schedule();
         });
         window.addEventListener("hashchange", () => {
-            if (state.watchlistOpen && !isHomeRoute() && !isFavoriteListRoute()) {
-                closeWatchlist();
-                schedule();
-                return;
-            }
             state.watchlistRequested = isWatchlistRoute();
             if (!state.watchlistRequested) closeWatchlist(false);
             schedule();
