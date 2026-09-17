@@ -1,8 +1,8 @@
 (function () {
     "use strict";
 
-    if (window.__punisherWatchlistV105) return;
-    window.__punisherWatchlistV105 = true;
+    if (window.__punisherWatchlistV106) return;
+    window.__punisherWatchlistV106 = true;
 
     const isWatchlistRoute = () => location.search.includes("pw-watchlist=1") || location.hash.includes("pw-watchlist=1");
     if (isWatchlistRoute()) document.documentElement.classList.add("pw-watchlist-route-active");
@@ -157,6 +157,26 @@
         return `${url.pathname}${url.search}${url.hash.replace(/([?&])pw-watchlist=1(&|$)/, (_match, lead, tail) => tail ? lead : "")}`;
     }
 
+    function cleanAppHashUrl(hash) {
+        const url = new URL(location.href);
+        url.searchParams.delete("pw-watchlist");
+        return `${url.pathname}${url.search}${hash}`;
+    }
+
+    function leaveWatchlist(event) {
+        const target = event?.currentTarget?.href;
+        event?.preventDefault?.();
+        state.watchlistRequested = false;
+        closeWatchlist(false);
+        if (target) {
+            const destination = new URL(target, location.href);
+            const current = new URL(location.href);
+            current.searchParams.delete("pw-watchlist");
+            history.replaceState(history.state, "", `${current.pathname}${current.search}${current.hash}`);
+            location.hash = destination.hash.slice(1);
+        }
+    }
+
     function removeWatchlistUrlMarker() {
         if (!isWatchlistRoute()) return;
         const url = new URL(location.href);
@@ -224,7 +244,7 @@
             : "paper-icon-button-light cardOverlayButton cardOverlayButton-hover itemAction pw-watchlist-button pw-watchlist-card-button";
         button.dataset.pwItemId = itemId;
         button.innerHTML = detail
-            ? `<span class="detailButton-content"><span class="pw-watchlist-icon"></span><span class="pw-watchlist-label"></span></span>`
+            ? `<span class="detailButton-content"><span class="pw-watchlist-icon" aria-hidden="true"></span></span>`
             : `<span class="cardOverlayButtonIcon cardOverlayButtonIcon-hover pw-watchlist-icon" aria-hidden="true"></span>`;
         updateButton(button, itemId);
         button.addEventListener("click", event => {
@@ -290,7 +310,9 @@
             return;
         }
         existing?.remove();
-        host.appendChild(makeButton(itemId, true));
+        const button = makeButton(itemId, true);
+        const more = host.querySelector(".btnMoreCommands, [data-action='more'], button[title*='more' i], button[title*='mehr' i]") || host.lastElementChild;
+        if (more) host.insertBefore(button, more); else host.appendChild(button);
     }
 
     function queueCard(card) {
@@ -531,8 +553,9 @@
         const card = document.createElement("article");
         card.className = "card pw-watchlist-item";
         const link = document.createElement("a");
-        link.href = `#/details?id=${encodeURIComponent(id)}`;
+        link.href = cleanAppHashUrl(`#/details?id=${encodeURIComponent(id)}`);
         link.className = "pw-watchlist-item-link";
+        link.addEventListener("click", leaveWatchlist);
         const image = document.createElement("div");
         image.className = "pw-watchlist-image";
         const imageUrl = state.api.getImageUrl?.(id, { type: "Primary", maxWidth: 480, quality: 90 });
@@ -541,6 +564,7 @@
         posterLink.href = link.href;
         posterLink.className = "pw-watchlist-poster-link";
         posterLink.setAttribute("aria-label", title);
+        posterLink.addEventListener("click", leaveWatchlist);
         image.appendChild(posterLink);
         const name = document.createElement("div");
         name.className = "pw-watchlist-name";
@@ -561,6 +585,7 @@
         play.title = "Play";
         play.setAttribute("aria-label", `Play ${title}`);
         play.innerHTML = actionSvg.play();
+        play.addEventListener("click", leaveWatchlist);
         image.appendChild(play);
         const actions = document.createElement("div");
         actions.className = "pw-watchlist-card-actions";
@@ -575,6 +600,7 @@
         more.title = "More details";
         more.setAttribute("aria-label", `More details for ${title}`);
         more.innerHTML = `<span class="cardOverlayButtonIcon cardOverlayButtonIcon-hover">${actionSvg.more()}</span>`;
+        more.addEventListener("click", leaveWatchlist);
         actions.appendChild(more);
         image.appendChild(actions);
         link.append(name, meta);

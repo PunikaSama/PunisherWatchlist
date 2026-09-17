@@ -9,6 +9,14 @@
     "imageUrl": "https://raw.githubusercontent.com/PunikaSama/PunisherWatchlist/main/PunisherWatchlist.png",
     "versions": [
       {
+        "version": "1.0.6.0",
+        "changelog": "Fixes navigation from Watchlist cards by removing the Watchlist URL marker before opening Jellyfin details. The Watchlist overlay now closes immediately and no longer remains layered over item detail pages. Detail pages now show a centered eye-only Watchlist action before the More menu instead of a clipped Watchlist text button.",
+        "targetAbi": "12.1.0.0",
+        "sourceUrl": "https://github.com/PunikaSama/PunisherWatchlist/releases/download/v1.0.6.0/PunisherWatchlist_1.0.6.0.zip",
+        "checksum": "c9adecd8e535a814f68c0efc4b59d9fc",
+        "timestamp": "2026-09-18 01:05:00"
+      },
+      {
         "version": "1.0.5.0",
         "changelog": "Turns Watchlist into an instant standalone history page without navigating through Home, preventing Home content flashes. Adds native-style played, favorite, play, Watchlist, and details controls plus unwatched episode badges to Watchlist cards, and excludes Jellyfin library-folder cards from the Watchlist eye action.",
         "targetAbi": "12.1.0.0",

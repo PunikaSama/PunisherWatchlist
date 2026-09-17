@@ -158,7 +158,13 @@
 .pw-watchlist-detail-button .detailButton-content {
     align-items: center;
     display: flex;
-    gap: .45rem;
+    justify-content: center;
+}
+
+.pw-watchlist-detail-button .pw-watchlist-icon,
+.pw-watchlist-detail-button .pw-watchlist-icon svg {
+    height: 1.5rem;
+    width: 1.5rem;
 }
 
 .pw-watchlist-page {
