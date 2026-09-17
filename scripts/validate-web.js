@@ -6,11 +6,39 @@ const script = fs.readFileSync(path.join(root, 'src', 'PunisherWatchlist', 'Web'
 const style = fs.readFileSync(path.join(root, 'src', 'PunisherWatchlist', 'Web', 'punisher-watchlist.css'), 'utf8');
 const controller = fs.readFileSync(path.join(root, 'src', 'PunisherWatchlist', 'Api', 'WatchlistController.cs'), 'utf8');
 
-for (const token of ['PunisherWatchlist/items', 'pw-watchlist-tab', 'pw-watchlist-card-button', 'pw-watchlist-detail-button', 'MuiAppBar-root', 'favoriteButton', 'pw-watchlist-card-button-adjacent', 'pw-watchlist-drawer-link', 'placeAfterFavorites', 'document.querySelectorAll(".card")', 'localStorageKey', 'pw-watchlist-route-active', 'isLibraryFolderCard', 'updateUserDataFlag', 'pw-watchlist-card-actions', 'cleanAppHashUrl', 'leaveWatchlist', 'state.aliases', 'canonicalKey', 'canonicalClientId', 'normalizeStoredIds', '"Season"', 'const seriesId = parentSeriesId(item)', 'state.aliases.set(normalizeId(itemId), seriesId)']) {
+for (const token of ['PunisherWatchlist/items', 'pw-watchlist-tab', 'pw-watchlist-card-button', 'pw-watchlist-detail-button', 'MuiAppBar-root', 'favoriteButton', 'pw-watchlist-card-button-adjacent', 'pw-watchlist-drawer-link', 'placeAfterFavorites', 'document.querySelectorAll(".card")', 'localStorageKey', 'pw-watchlist-route-active', 'isLibraryFolderCard', 'state.aliases', 'canonicalKey', 'canonicalClientId', 'normalizeStoredIds', '"Season"', 'const seriesId = parentSeriesId(item)', 'state.aliases.set(normalizeId(itemId), seriesId)', 'installNativeItemsProvider', 'api.getItems =', '#favoritesTab .itemsContainer', 'container.resume({ refresh: true })', 'favorite.click()']) {
     if (!script.includes(token)) throw new Error(`Missing client feature: ${token}`);
 }
-for (const token of ['.pw-watchlist-page', '.pw-watchlist-button', '.pw-watchlist-grid', '.pw-watchlist-home-hidden > :not(.pw-watchlist-page)', '.pw-watchlist-card-button-adjacent:is(', '.card:hover .pw-watchlist-card-button', '@media (hover: none)', '.pw-watchlist-detail-button.pw-watchlist-active']) {
+for (const token of ['.pw-watchlist-button', '.pw-watchlist-card-button-adjacent:is(', '.card:hover .pw-watchlist-card-button', '@media (hover: none)', '.pw-watchlist-detail-button.pw-watchlist-active']) {
     if (!style.includes(token)) throw new Error(`Missing stylesheet rule: ${token}`);
+}
+for (const obsolete of ['function renderWatchlist', 'function watchlistCard', 'pw-watchlist-grid', 'pw-watchlist-item', 'pw-watchlist-card-actions']) {
+    if (script.includes(obsolete) || style.includes(obsolete)) throw new Error(`Custom Watchlist renderer must stay removed: ${obsolete}`);
+}
+
+function extractFunction(name) {
+    const start = script.indexOf(`function ${name}(`);
+    if (start < 0) throw new Error(`Missing ${name} implementation.`);
+    const bodyStart = script.indexOf('{', start);
+    let depth = 0;
+    for (let index = bodyStart; index < script.length; index++) {
+        if (script[index] === '{') depth++;
+        if (script[index] === '}' && --depth === 0) {
+            const source = script.slice(start, index + 1);
+            return new Function(`${source}; return ${name};`)();
+        }
+    }
+    throw new Error(`Could not parse ${name}.`);
+}
+
+const isFavoriteItemsRequest = extractFunction('isFavoriteItemsRequest');
+const nativeWatchlistOptions = extractFunction('nativeWatchlistOptions');
+if (!isFavoriteItemsRequest({ Filters: 'IsFavorite' }) || !isFavoriteItemsRequest({ filters: ['IsFavorite'] }) || !isFavoriteItemsRequest({ IsFavorite: true }) || isFavoriteItemsRequest({ Filters: 'IsPlayed' })) {
+    throw new Error('Native Favorites request detection failed.');
+}
+const nativeOptions = nativeWatchlistOptions({ Filters: 'IsFavorite', IsFavorite: true, IncludeItemTypes: 'Series', Limit: 20 }, ['one', 'two']);
+if (nativeOptions.Ids !== 'one,two' || nativeOptions.IncludeItemTypes !== 'Series' || nativeOptions.Limit !== 20 || 'Filters' in nativeOptions || 'IsFavorite' in nativeOptions) {
+    throw new Error('Watchlist IDs are not mapped safely into the native Favorites query.');
 }
 const normalizeMatch = script.match(/function normalizeId\(value\) \{\s*([\s\S]*?)\n    \}/);
 if (!normalizeMatch) throw new Error('Missing normalizeId implementation.');

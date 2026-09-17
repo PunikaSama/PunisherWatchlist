@@ -9,12 +9,12 @@
     "imageUrl": "https://raw.githubusercontent.com/PunikaSama/PunisherWatchlist/main/PunisherWatchlist.png",
     "versions": [
       {
-        "version": "1.0.10.0",
-        "changelog": "Shows the detail-page eye in the theme accent color when the title is already in the Watchlist. Adds the Watchlist eye to season detail pages and maps seasons and episodes to their complete parent series. Removes obsolete catalog entries after the release cleanup.",
+        "version": "1.0.11.0",
+        "changelog": "Replaces the custom Watchlist grid and hover implementation with Jellyfin Web 12.1's native Favorites view. Watchlist IDs are supplied to Jellyfin's own Favorites sections, cards, responsive layout, metadata, badges, hover menus, and standard actions for identical behavior on desktop and mobile.",
         "targetAbi": "12.1.0.0",
-        "sourceUrl": "https://github.com/PunikaSama/PunisherWatchlist/releases/download/v1.0.10.0/PunisherWatchlist_1.0.10.0.zip",
-        "checksum": "f88a889d5d38b2ffe56c11f7108a0282",
-        "timestamp": "2026-09-18 03:00:00"
+        "sourceUrl": "https://github.com/PunikaSama/PunisherWatchlist/releases/download/v1.0.11.0/PunisherWatchlist_1.0.11.0.zip",
+        "checksum": "3b4f32a5ea480463eddef074d67f3e15",
+        "timestamp": "2026-09-18 03:30:00"
       }
     ]
   }

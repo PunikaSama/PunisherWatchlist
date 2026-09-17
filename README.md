@@ -11,8 +11,8 @@ PunisherWatchlist adds a separate, personal Watchlist to Jellyfin Web. Movies, s
 - Add and remove with the same button
 - Dedicated Watchlist tab on the home screen
 - Movie, series, and episode support
-- Responsive desktop and mobile layout
-- Native styling plus matching integration for all PunisherFinTheme designs and accent colors
+- Jellyfin's native Favorites sections, cards, hover menus, metadata, badges, and responsive behavior
+- Matching integration for all PunisherFinTheme designs and accent colors
 
 ## Requirements
 
@@ -40,7 +40,7 @@ The release ZIP and its MD5 checksum are written to `artifacts`.
 
 ## Notes
 
-Watchlists are stored in the plugin configuration on the Jellyfin server and are separated by Jellyfin user ID. The plugin does not replace or modify Jellyfin favorites.
+Watchlists are stored in the plugin configuration on the Jellyfin server and are separated by Jellyfin user ID. The Watchlist reuses Jellyfin's native Favorites presentation but does not replace or modify the user's actual favorites.
 
 ## License
 
