@@ -53,7 +53,7 @@ public sealed class WatchlistController : ControllerBase
         }
 
         string[] visible = _store.Get(user.Id)
-            .Where(id => _library.GetItemById(id) is BaseItem item && item.IsVisible(user))
+            .Where(id => _library.GetItemById<BaseItem>(id, user.Id) is not null)
             .Select(id => id.ToString("D"))
             .ToArray();
         return Ok(new WatchlistPayload { ItemIds = visible });
@@ -81,8 +81,8 @@ public sealed class WatchlistController : ControllerBase
             return Unauthorized();
         }
 
-        BaseItem? item = _library.GetItemById(itemId);
-        if (item is null || !item.IsVisible(user) || !Supported(item.GetBaseItemKind()))
+        BaseItem? item = _library.GetItemById<BaseItem>(itemId, user.Id);
+        if (item is null || !Supported(item.GetBaseItemKind()))
         {
             return NotFound();
         }
@@ -100,6 +100,42 @@ public sealed class WatchlistController : ControllerBase
         }
 
         return Ok(new WatchlistState { ItemId = itemId.ToString("D"), InWatchlist = inWatchlist });
+    }
+
+    [HttpPut("items/{itemId:guid}")]
+    [Authorize]
+    [Produces(MediaTypeNames.Application.Json)]
+    public ActionResult<WatchlistState> Add(Guid itemId)
+    {
+        Jellyfin.Database.Implementations.Entities.User? user = CurrentUser();
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+
+        BaseItem? item = _library.GetItemById<BaseItem>(itemId, user.Id);
+        if (item is null || !Supported(item.GetBaseItemKind()))
+        {
+            return NotFound();
+        }
+
+        _store.Add(user.Id, itemId);
+        return Ok(new WatchlistState { ItemId = itemId.ToString("D"), InWatchlist = true });
+    }
+
+    [HttpDelete("items/{itemId:guid}")]
+    [Authorize]
+    [Produces(MediaTypeNames.Application.Json)]
+    public ActionResult<WatchlistState> Remove(Guid itemId)
+    {
+        Jellyfin.Database.Implementations.Entities.User? user = CurrentUser();
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+
+        _store.Remove(user.Id, itemId);
+        return Ok(new WatchlistState { ItemId = itemId.ToString("D"), InWatchlist = false });
     }
 
     private ActionResult Embedded(string resourceName, string contentType)

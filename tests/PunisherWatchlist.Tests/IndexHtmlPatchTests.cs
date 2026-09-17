@@ -16,6 +16,14 @@ public sealed class IndexHtmlPatchTests
     }
 
     [Fact]
+    public void Apply_LoadsWatchlistBeforeJellyfinApplicationScripts()
+    {
+        const string source = "<html><head><script id=\"jellyfin-app\" defer></script></head><body></body></html>";
+        string result = IndexHtmlPatch.Apply(new HtmlDocumentInput { Contents = source });
+        Assert.True(result.IndexOf("punisher-watchlist-client-loader", StringComparison.Ordinal) < result.IndexOf("jellyfin-app", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void Apply_DoesNotDuplicateLoader()
     {
         const string source = "<body><script id=\"punisher-watchlist-client-loader\"></script></body>";

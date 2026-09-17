@@ -9,6 +9,14 @@
     "imageUrl": "https://raw.githubusercontent.com/PunikaSama/PunisherWatchlist/main/PunisherWatchlist.png",
     "versions": [
       {
+        "version": "1.0.4.0",
+        "changelog": "Adds Watchlist eyes to library cards without waiting for metadata lookups, uses Jellyfin's user-scoped item lookup for stored entries, replaces toggle calls with explicit add and remove operations, adds an immediate per-user browser cache, and loads the Watchlist client before Jellyfin's application scripts to prevent the home screen from flashing.",
+        "targetAbi": "12.1.0.0",
+        "sourceUrl": "https://github.com/PunikaSama/PunisherWatchlist/releases/download/v1.0.4.0/PunisherWatchlist_1.0.4.0.zip",
+        "checksum": "13ef66e272032f50cbb1b8513f2d5abc",
+        "timestamp": "2026-09-18 00:20:00"
+      },
+      {
         "version": "1.0.3.0",
         "changelog": "Fixes authenticated per-user Watchlist storage on Jellyfin 12.1, opens the Watchlist through the correct modern home route without a black page, renders the loading state immediately, restores titles, adds eye controls to all supported library cards, and centers the transparent native-style eye action.",
         "targetAbi": "12.1.0.0",

@@ -1,8 +1,11 @@
 (function () {
     "use strict";
 
-    if (window.__punisherWatchlistV103) return;
-    window.__punisherWatchlistV103 = true;
+    if (window.__punisherWatchlistV104) return;
+    window.__punisherWatchlistV104 = true;
+
+    const isWatchlistRoute = () => location.hash.includes("pw-watchlist=1");
+    if (isWatchlistRoute()) document.documentElement.classList.add("pw-watchlist-route-active");
 
     const supportedTypes = new Set(["Movie", "Series", "Episode"]);
     const state = {
@@ -12,12 +15,10 @@
         loaded: false,
         loading: null,
         itemCache: new Map(),
-        pendingCards: new Map(),
-        cardTimer: 0,
         observer: null,
         scheduleTimer: 0,
         watchlistOpen: false,
-        watchlistRequested: false
+        watchlistRequested: isWatchlistRoute()
     };
 
     const eyeSvg = active => `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5c-5.4 0-9.3 4.2-10.5 6.3a1.4 1.4 0 0 0 0 1.4C2.7 14.8 6.6 19 12 19s9.3-4.2 10.5-6.3a1.4 1.4 0 0 0 0-1.4C21.3 9.2 17.4 5 12 5Zm0 11.3A4.3 4.3 0 1 1 12 7.7a4.3 4.3 0 0 1 0 8.6Zm0-2.2a2.1 2.1 0 1 0 0-4.2 2.1 2.1 0 0 0 0 4.2Z"${active ? " fill=\"currentColor\"" : ""}/></svg>`;
@@ -30,12 +31,33 @@
         return element instanceof HTMLElement && !element.hidden && element.getClientRects().length > 0;
     }
 
-    async function apiJson(path, type = "GET") {
+    async function apiJson(path, type = "GET", parameters) {
         const api = state.api || apiClient();
         if (!api) throw new Error("Jellyfin API is unavailable.");
-        const response = await api.fetch({ url: api.getUrl(path), type });
+        const response = await api.fetch({ url: api.getUrl(path, parameters), type });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         return response.status === 204 ? null : response.json();
+    }
+
+    function localStorageKey() {
+        return `punisher-watchlist:${location.origin}:${state.userId || "anonymous"}`;
+    }
+
+    function readLocalIds() {
+        try {
+            const value = JSON.parse(localStorage.getItem(localStorageKey()) || "[]");
+            return Array.isArray(value) ? value.map(id => String(id).toLowerCase()).filter(Boolean) : [];
+        } catch {
+            return [];
+        }
+    }
+
+    function writeLocalIds() {
+        try {
+            localStorage.setItem(localStorageKey(), JSON.stringify([...state.ids]));
+        } catch {
+            // Server-side storage remains the primary source when browser storage is unavailable.
+        }
     }
 
     async function loadState(force = false) {
@@ -53,11 +75,19 @@
             state.loading = apiJson("/PunisherWatchlist/items")
                 .then(payload => {
                     const ids = payload?.ItemIds || payload?.itemIds || [];
-                    state.ids = new Set(ids.map(id => String(id).toLowerCase()));
+                    state.ids = new Set([...ids.map(id => String(id).toLowerCase()), ...readLocalIds()]);
                     state.loaded = true;
+                    writeLocalIds();
+                    syncAllButtons();
                     return true;
                 })
-                .catch(() => false)
+                .catch(error => {
+                    console.error("PunisherWatchlist could not load server storage; using the browser cache.", error);
+                    state.ids = new Set(readLocalIds());
+                    state.loaded = true;
+                    syncAllButtons();
+                    return true;
+                })
                 .finally(() => { state.loading = null; });
         }
         return state.loading;
@@ -88,17 +118,12 @@
     async function loadItems(ids) {
         const missing = [...new Set(ids.filter(Boolean))].filter(id => !state.itemCache.has(id.toLowerCase()));
         if (!missing.length) return;
-        const api = state.api;
-        let result;
-        if (typeof api.getItems === "function") {
-            result = await api.getItems(state.userId, {
-                Ids: missing.join(","),
-                Fields: "PrimaryImageAspectRatio,Overview,ProductionYear",
-                EnableImages: true
-            });
-        } else {
-            result = await apiJson(`/Items?UserId=${encodeURIComponent(state.userId)}&Ids=${encodeURIComponent(missing.join(","))}&Fields=PrimaryImageAspectRatio,Overview,ProductionYear`);
-        }
+        const result = await apiJson("/Items", "GET", {
+            UserId: state.userId,
+            Ids: missing.join(","),
+            Fields: "PrimaryImageAspectRatio,Overview,ProductionYear",
+            EnableImages: true
+        });
         for (const item of result?.Items || result?.items || []) {
             state.itemCache.set(String(item.Id || item.id).toLowerCase(), item);
         }
@@ -111,11 +136,16 @@
     async function toggle(itemId, button) {
         if (!itemId || button?.dataset?.busy === "true") return;
         if (button) button.dataset.busy = "true";
+        const key = itemId.toLowerCase();
+        const desired = !state.ids.has(key);
+        if (desired) state.ids.add(key); else state.ids.delete(key);
+        writeLocalIds();
+        syncButtons(itemId);
         try {
-            const result = await apiJson(`/PunisherWatchlist/items/${encodeURIComponent(itemId)}/toggle`, "POST");
-            const active = result?.InWatchlist ?? result?.inWatchlist ?? false;
-            const key = itemId.toLowerCase();
+            const result = await apiJson(`/PunisherWatchlist/items/${encodeURIComponent(itemId)}`, desired ? "PUT" : "DELETE");
+            const active = result?.InWatchlist ?? result?.inWatchlist ?? desired;
             if (active) state.ids.add(key); else state.ids.delete(key);
+            writeLocalIds();
             syncButtons(itemId);
             document.dispatchEvent(new CustomEvent("punisherwatchlistchange", { detail: { itemId, active } }));
             if (state.watchlistOpen) await renderWatchlist();
@@ -143,6 +173,12 @@
     function syncButtons(itemId) {
         document.querySelectorAll(".pw-watchlist-button[data-pw-item-id]").forEach(button => {
             if (button.dataset.pwItemId?.toLowerCase() === itemId.toLowerCase()) updateButton(button, itemId);
+        });
+    }
+
+    function syncAllButtons() {
+        document.querySelectorAll(".pw-watchlist-button[data-pw-item-id]").forEach(button => {
+            if (button.dataset.pwItemId) updateButton(button, button.dataset.pwItemId);
         });
     }
 
@@ -227,28 +263,7 @@
         if (!(card instanceof HTMLElement) || card.closest(".pw-watchlist-page") || card.querySelector(":scope .pw-watchlist-card-button")) return;
         const itemId = cardId(card);
         if (!itemId) return;
-        const key = itemId.toLowerCase();
-        if (!state.pendingCards.has(key)) state.pendingCards.set(key, []);
-        state.pendingCards.get(key).push(card);
-        if (!state.cardTimer) state.cardTimer = window.setTimeout(flushCards, 70);
-    }
-
-    async function flushCards() {
-        state.cardTimer = 0;
-        const pending = new Map(state.pendingCards);
-        state.pendingCards.clear();
-        try {
-            await loadItems([...pending.keys()]);
-            for (const [key, cards] of pending) {
-                if (!isSupported(state.itemCache.get(key))) continue;
-                for (const card of cards) {
-                    if (!card.isConnected || card.querySelector(":scope .pw-watchlist-card-button")) continue;
-                    placeCardButton(card, cardId(card));
-                }
-            }
-        } catch {
-            // A later DOM update retries undecorated cards.
-        }
+        placeCardButton(card, itemId);
     }
 
     function ensureCardButtons() {
@@ -316,6 +331,7 @@
 
     function activateWatchlistRoute() {
         state.watchlistRequested = true;
+        document.documentElement.classList.add("pw-watchlist-route-active");
         if (!location.hash.includes("pw-watchlist=1")) location.hash = "/home?pw-watchlist=1";
         document.querySelector(".MuiBackdrop-root, [class*='MuiBackdrop-root']")?.click?.();
         schedule();
@@ -373,6 +389,7 @@
         const needsRender = !state.watchlistOpen || !home.querySelector(":scope > .pw-watchlist-page");
         state.watchlistOpen = true;
         state.watchlistRequested = true;
+        document.documentElement.classList.add("pw-watchlist-route-active");
         home.classList.add("pw-watchlist-home-hidden");
         document.querySelectorAll(".pw-watchlist-tab").forEach(tab => {
             tab.parentElement?.querySelectorAll(".emby-tab-button-active, [aria-selected='true']").forEach(other => {
@@ -391,6 +408,7 @@
 
     function closeWatchlist() {
         state.watchlistRequested = false;
+        document.documentElement.classList.remove("pw-watchlist-route-active");
         if (!state.watchlistOpen) return;
         state.watchlistOpen = false;
         document.querySelectorAll(".pw-watchlist-home-hidden").forEach(element => element.classList.remove("pw-watchlist-home-hidden"));
@@ -421,7 +439,13 @@
             page.innerHTML = `<div class="pw-watchlist-heading"><h2>Watchlist</h2></div><div class="pw-watchlist-empty">Your Watchlist is empty. Use the eye button on a movie, series, or episode to add it.</div>`;
             return;
         }
-        await loadItems(ids);
+        try {
+            await loadItems(ids);
+        } catch (error) {
+            console.error("PunisherWatchlist could not load item metadata.", error);
+            page.innerHTML = `<div class="pw-watchlist-heading"><h2>Watchlist</h2></div><div class="pw-watchlist-empty pw-watchlist-load-error">The saved titles could not be loaded. Please try again.</div>`;
+            return;
+        }
         const items = ids.map(id => state.itemCache.get(id)).filter(isSupported);
         page.innerHTML = `<div class="pw-watchlist-heading"><h2>Watchlist</h2><span>${items.length} ${items.length === 1 ? "title" : "titles"}</span></div><div class="pw-watchlist-grid"></div>`;
         const grid = page.querySelector(".pw-watchlist-grid");
@@ -455,13 +479,13 @@
         state.api = apiClient();
         if (!state.api || !state.api.getCurrentUserId?.()) return;
         ensureWatchlistTab();
+        ensureCardButtons();
         const wantsWatchlist = state.watchlistRequested || location.hash.includes("pw-watchlist=1");
         if (wantsWatchlist) {
             await openWatchlist();
         } else {
             await loadState();
         }
-        ensureCardButtons();
         await ensureDetailButton();
         if (!wantsWatchlist && state.watchlistOpen) {
             const home = homeContainer();

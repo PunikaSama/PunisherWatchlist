@@ -3,9 +3,9 @@
     <TargetFramework>net10.0</TargetFramework>
     <AssemblyName>Jellyfin.Plugin.PunisherWatchlist</AssemblyName>
     <RootNamespace>PunisherWatchlist</RootNamespace>
-    <Version>1.0.3.0</Version>
-    <AssemblyVersion>1.0.3.0</AssemblyVersion>
-    <FileVersion>1.0.3.0</FileVersion>
+    <Version>1.0.4.0</Version>
+    <AssemblyVersion>1.0.4.0</AssemblyVersion>
+    <FileVersion>1.0.4.0</FileVersion>
     <Description>Personal watchlists for Jellyfin 12.1 Web.</Description>
     <RepositoryUrl>https://github.com/PunikaSama/PunisherWatchlist</RepositoryUrl>
     <RepositoryType>git</RepositoryType>

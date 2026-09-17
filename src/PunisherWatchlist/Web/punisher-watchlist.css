@@ -2,6 +2,11 @@
     display: block !important;
 }
 
+.pw-watchlist-route-active .homeSectionsContainer > :not(.pw-watchlist-page),
+.pw-watchlist-route-active [data-testid="home-sections"] > :not(.pw-watchlist-page) {
+    display: none !important;
+}
+
 .pw-watchlist-home-hidden > :not(.pw-watchlist-page) {
     display: none !important;
 }

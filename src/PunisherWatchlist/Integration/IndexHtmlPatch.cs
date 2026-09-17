@@ -15,10 +15,21 @@ public static class IndexHtmlPatch
             return html;
         }
 
-        int insertionPoint = html.LastIndexOf("</body>", StringComparison.OrdinalIgnoreCase);
-        if (insertionPoint < 0)
+        int bodyEnd = html.LastIndexOf("</body>", StringComparison.OrdinalIgnoreCase);
+        if (bodyEnd < 0)
         {
             return html;
+        }
+
+        int insertionPoint = bodyEnd;
+        int headStart = html.IndexOf("<head", StringComparison.OrdinalIgnoreCase);
+        if (headStart >= 0)
+        {
+            int headOpenEnd = html.IndexOf('>', headStart);
+            if (headOpenEnd >= 0)
+            {
+                insertionPoint = headOpenEnd + 1;
+            }
         }
 
         string baseUrl = Plugin.Current?.ServerConfiguration.GetNetworkConfiguration().BaseUrl?.Trim() ?? string.Empty;
@@ -35,4 +46,3 @@ public sealed class HtmlDocumentInput
     [JsonPropertyName("contents")]
     public string? Contents { get; init; }
 }
-
