@@ -3,6 +3,7 @@ using System.Reflection;
 using System.Security.Claims;
 using Jellyfin.Data.Enums;
 using MediaBrowser.Controller.Entities;
+using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -52,10 +53,25 @@ public sealed class WatchlistController : ControllerBase
             return Unauthorized();
         }
 
-        string[] visible = _store.Get(user.Id)
-            .Where(id => _library.GetItemById<BaseItem>(id, user.Id) is not null)
-            .Select(id => id.ToString("D"))
-            .ToArray();
+        var canonicalIds = new List<Guid>();
+        foreach (Guid storedId in _store.Get(user.Id))
+        {
+            BaseItem? item = ResolveWatchlistItem(storedId, user.Id);
+            if (item is null || !Supported(item.GetBaseItemKind()))
+            {
+                continue;
+            }
+
+            if (item.Id != storedId)
+            {
+                _store.Remove(user.Id, storedId);
+                _store.Add(user.Id, item.Id);
+            }
+
+            canonicalIds.Add(item.Id);
+        }
+
+        string[] visible = canonicalIds.Distinct().Select(id => id.ToString("D")).ToArray();
         return Ok(new WatchlistPayload { ItemIds = visible });
     }
 
@@ -65,9 +81,14 @@ public sealed class WatchlistController : ControllerBase
     public ActionResult<WatchlistState> State(Guid itemId)
     {
         Jellyfin.Database.Implementations.Entities.User? user = CurrentUser();
-        return user is null
-            ? Unauthorized()
-            : Ok(new WatchlistState { ItemId = itemId.ToString("D"), InWatchlist = _store.Contains(user.Id, itemId) });
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+
+        BaseItem? item = ResolveWatchlistItem(itemId, user.Id);
+        Guid canonicalId = item?.Id ?? itemId;
+        return Ok(new WatchlistState { ItemId = canonicalId.ToString("D"), InWatchlist = _store.Contains(user.Id, canonicalId) });
     }
 
     [HttpPost("items/{itemId:guid}/toggle")]
@@ -81,25 +102,26 @@ public sealed class WatchlistController : ControllerBase
             return Unauthorized();
         }
 
-        BaseItem? item = _library.GetItemById<BaseItem>(itemId, user.Id);
+        BaseItem? item = ResolveWatchlistItem(itemId, user.Id);
         if (item is null || !Supported(item.GetBaseItemKind()))
         {
             return NotFound();
         }
 
         bool inWatchlist;
-        if (_store.Contains(user.Id, itemId))
+        Guid canonicalId = item.Id;
+        if (_store.Contains(user.Id, canonicalId))
         {
-            _store.Remove(user.Id, itemId);
+            _store.Remove(user.Id, canonicalId);
             inWatchlist = false;
         }
         else
         {
-            _store.Add(user.Id, itemId);
+            _store.Add(user.Id, canonicalId);
             inWatchlist = true;
         }
 
-        return Ok(new WatchlistState { ItemId = itemId.ToString("D"), InWatchlist = inWatchlist });
+        return Ok(new WatchlistState { ItemId = canonicalId.ToString("D"), InWatchlist = inWatchlist });
     }
 
     [HttpPut("items/{itemId:guid}")]
@@ -113,14 +135,14 @@ public sealed class WatchlistController : ControllerBase
             return Unauthorized();
         }
 
-        BaseItem? item = _library.GetItemById<BaseItem>(itemId, user.Id);
+        BaseItem? item = ResolveWatchlistItem(itemId, user.Id);
         if (item is null || !Supported(item.GetBaseItemKind()))
         {
             return NotFound();
         }
 
-        _store.Add(user.Id, itemId);
-        return Ok(new WatchlistState { ItemId = itemId.ToString("D"), InWatchlist = true });
+        _store.Add(user.Id, item.Id);
+        return Ok(new WatchlistState { ItemId = item.Id.ToString("D"), InWatchlist = true });
     }
 
     [HttpDelete("items/{itemId:guid}")]
@@ -134,8 +156,10 @@ public sealed class WatchlistController : ControllerBase
             return Unauthorized();
         }
 
-        _store.Remove(user.Id, itemId);
-        return Ok(new WatchlistState { ItemId = itemId.ToString("D"), InWatchlist = false });
+        BaseItem? item = ResolveWatchlistItem(itemId, user.Id);
+        Guid canonicalId = item?.Id ?? itemId;
+        _store.Remove(user.Id, canonicalId);
+        return Ok(new WatchlistState { ItemId = canonicalId.ToString("D"), InWatchlist = false });
     }
 
     private ActionResult Embedded(string resourceName, string contentType)
@@ -157,6 +181,26 @@ public sealed class WatchlistController : ControllerBase
             .Value;
         id ??= User.FindFirstValue(ClaimTypes.NameIdentifier);
         return Guid.TryParse(id, out Guid userId) ? _users.GetUserById(userId) : null;
+    }
+
+    private BaseItem? ResolveWatchlistItem(Guid itemId, Guid userId)
+    {
+        BaseItem? item = _library.GetItemById<BaseItem>(itemId, userId);
+        if (item is Episode episode)
+        {
+            return episode.Series is null
+                ? item
+                : _library.GetItemById<BaseItem>(episode.Series.Id, userId) ?? episode.Series;
+        }
+
+        if (item is Season season)
+        {
+            return season.Series is null
+                ? item
+                : _library.GetItemById<BaseItem>(season.Series.Id, userId) ?? season.Series;
+        }
+
+        return item;
     }
 
     private static bool Supported(BaseItemKind kind)

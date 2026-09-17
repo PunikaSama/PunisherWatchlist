@@ -5,7 +5,7 @@ const root = path.resolve(__dirname, '..');
 const script = fs.readFileSync(path.join(root, 'src', 'PunisherWatchlist', 'Web', 'punisher-watchlist.js'), 'utf8');
 const style = fs.readFileSync(path.join(root, 'src', 'PunisherWatchlist', 'Web', 'punisher-watchlist.css'), 'utf8');
 
-for (const token of ['PunisherWatchlist/items', 'pw-watchlist-tab', 'pw-watchlist-card-button', 'pw-watchlist-detail-button', 'MuiAppBar-root', 'favoriteButton', 'pw-watchlist-card-button-adjacent', 'pw-watchlist-drawer-link', 'placeAfterFavorites', 'document.querySelectorAll(".card")', 'localStorageKey', 'pw-watchlist-route-active', 'isLibraryFolderCard', 'updateUserDataFlag', 'pw-watchlist-card-actions', 'cleanAppHashUrl', 'leaveWatchlist']) {
+for (const token of ['PunisherWatchlist/items', 'pw-watchlist-tab', 'pw-watchlist-card-button', 'pw-watchlist-detail-button', 'MuiAppBar-root', 'favoriteButton', 'pw-watchlist-card-button-adjacent', 'pw-watchlist-drawer-link', 'placeAfterFavorites', 'document.querySelectorAll(".card")', 'localStorageKey', 'pw-watchlist-route-active', 'isLibraryFolderCard', 'updateUserDataFlag', 'pw-watchlist-card-actions', 'cleanAppHashUrl', 'leaveWatchlist', 'state.aliases', 'canonicalKey']) {
     if (!script.includes(token)) throw new Error(`Missing client feature: ${token}`);
 }
 for (const token of ['.pw-watchlist-page', '.pw-watchlist-button', '.pw-watchlist-grid', '.pw-watchlist-home-hidden > :not(.pw-watchlist-page)', '.pw-watchlist-card-button-adjacent:is(', '.card:hover .pw-watchlist-card-button', '@media (hover: none)']) {

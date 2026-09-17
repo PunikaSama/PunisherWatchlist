@@ -1,8 +1,8 @@
 (function () {
     "use strict";
 
-    if (window.__punisherWatchlistV106) return;
-    window.__punisherWatchlistV106 = true;
+    if (window.__punisherWatchlistV107) return;
+    window.__punisherWatchlistV107 = true;
 
     const isWatchlistRoute = () => location.search.includes("pw-watchlist=1") || location.hash.includes("pw-watchlist=1");
     if (isWatchlistRoute()) document.documentElement.classList.add("pw-watchlist-route-active");
@@ -15,6 +15,7 @@
         loaded: false,
         loading: null,
         itemCache: new Map(),
+        aliases: new Map(),
         observer: null,
         scheduleTimer: 0,
         watchlistOpen: false,
@@ -76,13 +77,14 @@
             state.loaded = false;
             state.ids.clear();
             state.itemCache.clear();
+            state.aliases.clear();
         }
         if (state.loaded && !force) return true;
         if (!state.loading) {
             state.loading = apiJson("/PunisherWatchlist/items")
                 .then(payload => {
                     const ids = payload?.ItemIds || payload?.itemIds || [];
-                    state.ids = new Set([...ids.map(id => String(id).toLowerCase()), ...readLocalIds()]);
+                    state.ids = new Set(ids.map(id => String(id).toLowerCase()));
                     state.loaded = true;
                     writeLocalIds();
                     syncAllButtons();
@@ -190,15 +192,20 @@
     async function toggle(itemId, button) {
         if (!itemId || button?.dataset?.busy === "true") return;
         if (button) button.dataset.busy = "true";
-        const key = itemId.toLowerCase();
-        const desired = !state.ids.has(key);
-        if (desired) state.ids.add(key); else state.ids.delete(key);
+        const sourceKey = itemId.toLowerCase();
+        const effectiveKey = state.aliases.get(sourceKey) || sourceKey;
+        const desired = !state.ids.has(effectiveKey);
+        if (desired) state.ids.add(effectiveKey); else state.ids.delete(effectiveKey);
         writeLocalIds();
         syncButtons(itemId);
         try {
             const result = await apiJson(`/PunisherWatchlist/items/${encodeURIComponent(itemId)}`, desired ? "PUT" : "DELETE");
             const active = result?.InWatchlist ?? result?.inWatchlist ?? desired;
-            if (active) state.ids.add(key); else state.ids.delete(key);
+            const canonicalKey = String(result?.ItemId ?? result?.itemId ?? effectiveKey).toLowerCase();
+            state.aliases.set(sourceKey, canonicalKey);
+            state.ids.delete(sourceKey);
+            state.ids.delete(effectiveKey);
+            if (active) state.ids.add(canonicalKey); else state.ids.delete(canonicalKey);
             writeLocalIds();
             syncButtons(itemId);
             document.dispatchEvent(new CustomEvent("punisherwatchlistchange", { detail: { itemId, active } }));
@@ -213,7 +220,8 @@
     }
 
     function updateButton(button, itemId) {
-        const active = state.ids.has(itemId.toLowerCase());
+        const sourceKey = itemId.toLowerCase();
+        const active = state.ids.has(state.aliases.get(sourceKey) || sourceKey);
         button.classList.toggle("pw-watchlist-active", active);
         button.setAttribute("aria-pressed", String(active));
         button.setAttribute("aria-label", active ? "Remove from Watchlist" : "Add to Watchlist");
