@@ -1,8 +1,8 @@
 (function () {
     "use strict";
 
-    if (window.__punisherWatchlistV111) return;
-    window.__punisherWatchlistV111 = true;
+    if (window.__punisherWatchlistV112) return;
+    window.__punisherWatchlistV112 = true;
 
     const isWatchlistRoute = () => location.search.includes("pw-watchlist=1") || location.hash.includes("pw-watchlist=1");
     if (isWatchlistRoute()) document.documentElement.classList.add("pw-watchlist-route-active");
@@ -509,7 +509,7 @@
         document.querySelectorAll(".pw-watchlist-tab").forEach(tab => {
             tab.parentElement?.querySelectorAll(".emby-tab-button-active, [aria-selected='true']").forEach(other => {
                 if (other !== tab) {
-                    other.classList.remove("emby-tab-button-active");
+                    other.classList.remove("emby-tab-button-active", "Mui-selected", "navMenuOption-selected", "selected", "buttonActive", "pw-watchlist-nav-active");
                     other.setAttribute("aria-selected", "false");
                 }
             });
