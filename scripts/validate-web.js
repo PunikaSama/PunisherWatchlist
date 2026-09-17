@@ -6,10 +6,10 @@ const script = fs.readFileSync(path.join(root, 'src', 'PunisherWatchlist', 'Web'
 const style = fs.readFileSync(path.join(root, 'src', 'PunisherWatchlist', 'Web', 'punisher-watchlist.css'), 'utf8');
 const controller = fs.readFileSync(path.join(root, 'src', 'PunisherWatchlist', 'Api', 'WatchlistController.cs'), 'utf8');
 
-for (const token of ['PunisherWatchlist/items', 'pw-watchlist-tab', 'pw-watchlist-card-button', 'pw-watchlist-detail-button', 'MuiAppBar-root', 'favoriteButton', 'pw-watchlist-card-button-adjacent', 'pw-watchlist-drawer-link', 'placeAfterFavorites', 'document.querySelectorAll(".card")', 'localStorageKey', 'pw-watchlist-route-active', 'isLibraryFolderCard', 'state.aliases', 'canonicalKey', 'canonicalClientId', 'normalizeStoredIds', '"Season"', 'const seriesId = parentSeriesId(item)', 'state.aliases.set(normalizeId(itemId), seriesId)', 'installNativeItemsProvider', 'api.getItems =', 'function watchlistHash()', 'function isStandaloneWatchlistRoute()', 'type: "Movie,Series"', 'container.refreshItems()', 'providerActive: false', 'state.providerActive = true', 'shouldUseWatchlistProvider(state.watchlistOpen, state.providerActive)', 'window.setTimeout(() => refreshWatchlistView(), 700)', 'other.classList.remove("emby-tab-button-active", "Mui-selected", "navMenuOption-selected", "selected", "buttonActive", "pw-watchlist-nav-active")']) {
+for (const token of ['PunisherWatchlist/items', 'pw-watchlist-tab', 'pw-watchlist-card-button', 'pw-watchlist-detail-button', 'MuiAppBar-root', 'favoriteButton', 'pw-watchlist-card-button-adjacent', 'pw-watchlist-drawer-link', 'placeAfterFavorites', 'document.querySelectorAll(".card")', 'localStorageKey', 'pw-watchlist-route-active', 'isLibraryFolderCard', 'state.aliases', 'canonicalKey', 'canonicalClientId', 'normalizeStoredIds', '"Season"', 'const seriesId = parentSeriesId(item)', 'state.aliases.set(normalizeId(itemId), seriesId)', 'installNativeItemsProvider', 'api.getItems =', 'function watchlistHash()', 'function isStandaloneWatchlistRoute()', 'type: "Movie,Series"', 'container.refreshItems()', 'providerActive: false', 'state.providerActive = true', 'shouldUseWatchlistProvider(state.watchlistOpen, state.providerActive)', 'window.setTimeout(() => refreshWatchlistView(), 700)', 'orderWatchlistResult(result, ids, startIndex, limit)', 'ensureWatchlistCardFooter(card, itemId)', 'other.classList.remove("emby-tab-button-active", "Mui-selected", "navMenuOption-selected", "selected", "buttonActive", "pw-watchlist-nav-active")']) {
     if (!script.includes(token)) throw new Error(`Missing client feature: ${token}`);
 }
-for (const token of ['.pw-watchlist-button', '.pw-watchlist-card-button-adjacent:is(', '.card:hover .pw-watchlist-card-button', '@media (hover: none)', '.pw-watchlist-detail-button.pw-watchlist-active']) {
+for (const token of ['.pw-watchlist-button', '.pw-watchlist-card-button-adjacent:is(', '.card:hover .pw-watchlist-card-button', '@media (hover: none)', '.pw-watchlist-detail-button.pw-watchlist-active', '.pw-watchlist-route-active .itemsViewSettingsContainer', '.pw-watchlist-native-footer .cardText-first']) {
     if (!style.includes(token)) throw new Error(`Missing stylesheet rule: ${token}`);
 }
 for (const obsolete of ['function renderWatchlist', 'function watchlistCard', 'pw-watchlist-grid', 'pw-watchlist-item', 'pw-watchlist-card-actions', 'favorite.click()', '#favoritesTab .itemsContainer']) {
@@ -32,13 +32,18 @@ function extractFunction(name) {
 }
 
 const nativeWatchlistOptions = extractFunction('nativeWatchlistOptions');
+const orderWatchlistResult = extractFunction('orderWatchlistResult');
 const shouldUseWatchlistProvider = extractFunction('shouldUseWatchlistProvider');
 if (!shouldUseWatchlistProvider(true, true) || shouldUseWatchlistProvider(true, false) || shouldUseWatchlistProvider(false, true)) {
     throw new Error('Standalone Watchlist provider activation failed.');
 }
-const nativeOptions = nativeWatchlistOptions({ Filters: 'IsFavorite', IsFavorite: true, IncludeItemTypes: 'Series', Limit: 20 }, ['one', 'two']);
-if (nativeOptions.Ids !== 'one,two' || nativeOptions.IncludeItemTypes !== 'Series' || nativeOptions.Limit !== 20 || 'Filters' in nativeOptions || 'IsFavorite' in nativeOptions) {
+const nativeOptions = nativeWatchlistOptions({ Filters: 'IsFavorite', IsFavorite: true, IncludeItemTypes: 'Series', Limit: 20, SortBy: 'SortName', SortOrder: 'Ascending' }, ['one', 'two']);
+if (nativeOptions.Ids !== 'one,two' || nativeOptions.IncludeItemTypes !== 'Series' || nativeOptions.Limit !== 2 || nativeOptions.StartIndex !== 0 || 'Filters' in nativeOptions || 'IsFavorite' in nativeOptions || 'SortBy' in nativeOptions || 'SortOrder' in nativeOptions) {
     throw new Error('Watchlist IDs are not mapped safely into the native Favorites query.');
+}
+const orderedResult = orderWatchlistResult({ Items: [{ Id: 'old' }, { Id: 'new' }, { Id: 'middle' }] }, ['new', 'middle', 'old'], 0, 2);
+if (orderedResult.TotalRecordCount !== 3 || orderedResult.Items.map(item => item.Id).join(',') !== 'new,middle') {
+    throw new Error('Watchlist results are not ordered by newest additions before paging.');
 }
 const normalizeMatch = script.match(/function normalizeId\(value\) \{\s*([\s\S]*?)\n    \}/);
 if (!normalizeMatch) throw new Error('Missing normalizeId implementation.');

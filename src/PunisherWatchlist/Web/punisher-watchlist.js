@@ -1,8 +1,8 @@
 (function () {
     "use strict";
 
-    if (window.__punisherWatchlistV114) return;
-    window.__punisherWatchlistV114 = true;
+    if (window.__punisherWatchlistV115) return;
+    window.__punisherWatchlistV115 = true;
 
     const isWatchlistRoute = () => location.search.includes("pw-watchlist=1") || location.hash.includes("pw-watchlist=1");
     if (isWatchlistRoute()) document.documentElement.classList.add("pw-watchlist-route-active");
@@ -48,12 +48,39 @@
     }
 
     function nativeWatchlistOptions(options, ids) {
-        const result = { ...options, Ids: ids.join(",") };
+        const result = { ...options, Ids: ids.join(","), StartIndex: 0, Limit: ids.length };
         delete result.Filters;
         delete result.filters;
         delete result.IsFavorite;
         delete result.isFavorite;
+        delete result.SortBy;
+        delete result.sortBy;
+        delete result.SortOrder;
+        delete result.sortOrder;
         return result;
+    }
+
+    function orderWatchlistResult(result, ids, startIndex = 0, limit = ids.length) {
+        const normalize = value => String(value || "").replace(/-/g, "").toLowerCase();
+        const positions = new Map(ids.map((id, index) => [normalize(id), index]));
+        const source = result?.Items || result?.items || [];
+        const ordered = [...source]
+            .filter(item => positions.has(normalize(item?.Id || item?.id)))
+            .sort((left, right) => positions.get(normalize(left?.Id || left?.id)) - positions.get(normalize(right?.Id || right?.id)));
+        const first = Math.max(0, Number(startIndex) || 0);
+        const requested = Number(limit);
+        const count = Number.isFinite(requested) && requested > 0 ? requested : ordered.length;
+        const items = ordered.slice(first, first + count);
+        const response = { ...(result || {}), Items: items, TotalRecordCount: ordered.length, StartIndex: first };
+        if (result && "items" in result) response.items = items;
+        if (result && "totalRecordCount" in result) response.totalRecordCount = ordered.length;
+        if (result && "startIndex" in result) response.startIndex = first;
+        return response;
+    }
+
+    function addNewest(itemId) {
+        const normalized = normalizeId(itemId);
+        state.ids = new Set([normalized, ...[...state.ids].filter(id => id !== normalized)]);
     }
 
     function shouldUseWatchlistProvider(watchlistOpen, providerActive) {
@@ -238,7 +265,7 @@
         const sourceKey = normalizeId(itemId);
         const effectiveKey = await canonicalClientId(itemId);
         const desired = !state.ids.has(effectiveKey);
-        if (desired) state.ids.add(effectiveKey); else state.ids.delete(effectiveKey);
+        if (desired) addNewest(effectiveKey); else state.ids.delete(effectiveKey);
         writeLocalIds();
         syncButtons(itemId);
         try {
@@ -248,7 +275,7 @@
             state.aliases.set(sourceKey, canonicalKey);
             state.ids.delete(sourceKey);
             state.ids.delete(effectiveKey);
-            if (active) state.ids.add(canonicalKey); else state.ids.delete(canonicalKey);
+            if (active) addNewest(canonicalKey); else state.ids.delete(canonicalKey);
             writeLocalIds();
             syncButtons(itemId);
             document.dispatchEvent(new CustomEvent("punisherwatchlistchange", { detail: { itemId, active } }));
@@ -369,10 +396,43 @@
     }
 
     function queueCard(card) {
-        if (!(card instanceof HTMLElement) || isLibraryFolderCard(card) || card.querySelector(":scope .pw-watchlist-card-button")) return;
+        if (!(card instanceof HTMLElement) || isLibraryFolderCard(card)) return;
         const itemId = cardId(card);
         if (!itemId) return;
-        placeCardButton(card, itemId);
+        if (!card.querySelector(":scope .pw-watchlist-card-button")) placeCardButton(card, itemId);
+        ensureWatchlistCardFooter(card, itemId);
+    }
+
+    function ensureWatchlistCardFooter(card, itemId) {
+        if (!state.providerActive || !isStandaloneWatchlistRoute()) return;
+        const item = state.itemCache.get(normalizeId(itemId));
+        const name = item?.Name || item?.name;
+        if (!name) return;
+        const box = card.querySelector(".cardScalable")?.parentElement || card.querySelector(".cardBox") || card;
+        let footer = box.querySelector(":scope > .cardFooter");
+        if (!footer) {
+            footer = document.createElement("div");
+            footer.className = "cardFooter pw-watchlist-native-footer";
+            box.appendChild(footer);
+        } else {
+            footer.classList.add("pw-watchlist-native-footer");
+        }
+        box.classList.add("cardBox-bottompadded");
+        let title = footer.querySelector(".cardText-first");
+        if (!title) {
+            title = document.createElement("div");
+            title.className = "cardText cardText-first";
+            footer.prepend(title);
+        }
+        title.textContent = name;
+        const yearValue = item?.ProductionYear || item?.productionYear;
+        let year = footer.querySelector(".pw-watchlist-card-year");
+        if (yearValue && !year) {
+            year = document.createElement("div");
+            year.className = "cardText cardText-secondary pw-watchlist-card-year";
+            footer.appendChild(year);
+        }
+        if (year) year.textContent = yearValue ? String(yearValue) : "";
     }
 
     function ensureCardButtons() {
@@ -496,7 +556,10 @@
             if (!shouldUseWatchlistProvider(state.watchlistOpen, state.providerActive)) return original(userId, options);
             const ids = [...state.ids];
             if (!ids.length) return Promise.resolve({ Items: [], TotalRecordCount: 0, StartIndex: 0 });
-            return original(userId, nativeWatchlistOptions(options, ids));
+            const startIndex = options.StartIndex ?? options.startIndex ?? 0;
+            const limit = options.Limit ?? options.limit ?? ids.length;
+            return original(userId, nativeWatchlistOptions(options, ids))
+                .then(result => orderWatchlistResult(result, ids, startIndex, limit));
         };
     }
 
@@ -554,6 +617,7 @@
         if (!state.watchlistOpen) return;
         state.watchlistOpen = false;
         state.providerActive = false;
+        document.querySelectorAll(".pw-watchlist-native-footer").forEach(footer => footer.remove());
         document.querySelectorAll(".pw-watchlist-tab").forEach(tab => {
             tab.classList.remove("emby-tab-button-active");
             tab.classList.remove("pw-watchlist-nav-active");

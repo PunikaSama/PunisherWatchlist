@@ -2,6 +2,16 @@
     flex: 0 0 auto;
 }
 
+.pw-watchlist-route-active .itemsViewSettingsContainer {
+    display: none !important;
+}
+
+.pw-watchlist-native-footer .cardText-first {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .pw-watchlist-nav-link {
     align-items: center;
     color: inherit;
