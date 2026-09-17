@@ -9,84 +9,12 @@
     "imageUrl": "https://raw.githubusercontent.com/PunikaSama/PunisherWatchlist/main/PunisherWatchlist.png",
     "versions": [
       {
-        "version": "1.0.9.0",
-        "changelog": "Fixes an item-ID format mismatch that caused saved Watchlist entries to render as an empty tab. The API now returns Jellyfin's compact GUID format, and the client normalizes dashed and compact IDs before storage, cache lookup, aliases, button state, and metadata rendering. Adds a regression test for this exact failure.",
+        "version": "1.0.10.0",
+        "changelog": "Shows the detail-page eye in the theme accent color when the title is already in the Watchlist. Adds the Watchlist eye to season detail pages and maps seasons and episodes to their complete parent series. Removes obsolete catalog entries after the release cleanup.",
         "targetAbi": "12.1.0.0",
-        "sourceUrl": "https://github.com/PunikaSama/PunisherWatchlist/releases/download/v1.0.9.0/PunisherWatchlist_1.0.9.0.zip",
-        "checksum": "ab99a51c0015233ba55dc869f9942903",
-        "timestamp": "2026-09-18 02:10:00"
-      },
-      {
-        "version": "1.0.8.0",
-        "changelog": "Fixes additions disappearing after the server refresh. Episode and season cards are resolved to SeriesId in the client before saving, server and browser state are merged again, cached episode entries are normalized to their series, and server-side parent resolution no longer depends on loading the Series navigation property.",
-        "targetAbi": "12.1.0.0",
-        "sourceUrl": "https://github.com/PunikaSama/PunisherWatchlist/releases/download/v1.0.8.0/PunisherWatchlist_1.0.8.0.zip",
-        "checksum": "542f9938cf656d564e7775d0a8d60de2",
-        "timestamp": "2026-09-18 01:45:00"
-      },
-      {
-        "version": "1.0.7.0",
-        "changelog": "Adding an episode or season now resolves and stores its parent series, so the complete anime or show appears in Watchlist. Existing episode entries are migrated automatically to their series, and the client follows the canonical series ID returned by the server.",
-        "targetAbi": "12.1.0.0",
-        "sourceUrl": "https://github.com/PunikaSama/PunisherWatchlist/releases/download/v1.0.7.0/PunisherWatchlist_1.0.7.0.zip",
-        "checksum": "688bdd6c0dee5ae0d35d66783ab11ed9",
-        "timestamp": "2026-09-18 01:25:00"
-      },
-      {
-        "version": "1.0.6.0",
-        "changelog": "Fixes navigation from Watchlist cards by removing the Watchlist URL marker before opening Jellyfin details. The Watchlist overlay now closes immediately and no longer remains layered over item detail pages. Detail pages now show a centered eye-only Watchlist action before the More menu instead of a clipped Watchlist text button.",
-        "targetAbi": "12.1.0.0",
-        "sourceUrl": "https://github.com/PunikaSama/PunisherWatchlist/releases/download/v1.0.6.0/PunisherWatchlist_1.0.6.0.zip",
-        "checksum": "c9adecd8e535a814f68c0efc4b59d9fc",
-        "timestamp": "2026-09-18 01:05:00"
-      },
-      {
-        "version": "1.0.5.0",
-        "changelog": "Turns Watchlist into an instant standalone history page without navigating through Home, preventing Home content flashes. Adds native-style played, favorite, play, Watchlist, and details controls plus unwatched episode badges to Watchlist cards, and excludes Jellyfin library-folder cards from the Watchlist eye action.",
-        "targetAbi": "12.1.0.0",
-        "sourceUrl": "https://github.com/PunikaSama/PunisherWatchlist/releases/download/v1.0.5.0/PunisherWatchlist_1.0.5.0.zip",
-        "checksum": "7e8364eba77679762ade147611e9bb01",
-        "timestamp": "2026-09-18 00:45:00"
-      },
-      {
-        "version": "1.0.4.0",
-        "changelog": "Adds Watchlist eyes to library cards without waiting for metadata lookups, uses Jellyfin's user-scoped item lookup for stored entries, replaces toggle calls with explicit add and remove operations, adds an immediate per-user browser cache, and loads the Watchlist client before Jellyfin's application scripts to prevent the home screen from flashing.",
-        "targetAbi": "12.1.0.0",
-        "sourceUrl": "https://github.com/PunikaSama/PunisherWatchlist/releases/download/v1.0.4.0/PunisherWatchlist_1.0.4.0.zip",
-        "checksum": "13ef66e272032f50cbb1b8513f2d5abc",
-        "timestamp": "2026-09-18 00:20:00"
-      },
-      {
-        "version": "1.0.3.0",
-        "changelog": "Fixes authenticated per-user Watchlist storage on Jellyfin 12.1, opens the Watchlist through the correct modern home route without a black page, renders the loading state immediately, restores titles, adds eye controls to all supported library cards, and centers the transparent native-style eye action.",
-        "targetAbi": "12.1.0.0",
-        "sourceUrl": "https://github.com/PunikaSama/PunisherWatchlist/releases/download/v1.0.3.0/PunisherWatchlist_1.0.3.0.zip",
-        "checksum": "7103e86c9c61a0586129a3870d6c1b7f",
-        "timestamp": "2026-09-17 23:59:00"
-      },
-      {
-        "version": "1.0.2.0",
-        "changelog": "Places Watchlist directly after Favorites in the desktop primary navigation and adds it directly below Favorites in the mobile drawer. Fixes the empty Watchlist page, preserves PunisherFinTheme backgrounds, renders added movies, series, and episodes, and makes the card eye control transparent like Jellyfin's native overlay actions.",
-        "targetAbi": "12.1.0.0",
-        "sourceUrl": "https://github.com/PunikaSama/PunisherWatchlist/releases/download/v1.0.2.0/PunisherWatchlist_1.0.2.0.zip",
-        "checksum": "77c58f9ed2a4f7ca4af8649cc86952ee",
-        "timestamp": "2026-09-17 23:40:17"
-      },
-      {
-        "version": "1.0.1.0",
-        "changelog": "Adds the Watchlist entry to Jellyfin 12's modern top navigation and mobile navigation. Moves card eye controls beside Jellyfin's favorite heart and only reveals them on card hover or keyboard focus on desktop while keeping them accessible on touch devices.",
-        "targetAbi": "12.1.0.0",
-        "sourceUrl": "https://github.com/PunikaSama/PunisherWatchlist/releases/download/v1.0.1.0/PunisherWatchlist_1.0.1.0.zip",
-        "checksum": "50e52145af0b351c4103ddddb766b009",
-        "timestamp": "2026-09-17 23:23:33"
-      },
-      {
-        "version": "1.0.0.0",
-        "changelog": "Initial release with per-user server-side Watchlists, eye buttons on cards and detail pages, a dedicated home-screen Watchlist tab, and PunisherFinTheme integration.",
-        "targetAbi": "12.1.0.0",
-        "sourceUrl": "https://github.com/PunikaSama/PunisherWatchlist/releases/download/v1.0.0.0/PunisherWatchlist_1.0.0.0.zip",
-        "checksum": "c8d85a4ba1d089d0f47abc3b18b45486",
-        "timestamp": "2026-09-17 23:08:52"
+        "sourceUrl": "https://github.com/PunikaSama/PunisherWatchlist/releases/download/v1.0.10.0/PunisherWatchlist_1.0.10.0.zip",
+        "checksum": "f88a889d5d38b2ffe56c11f7108a0282",
+        "timestamp": "2026-09-18 03:00:00"
       }
     ]
   }

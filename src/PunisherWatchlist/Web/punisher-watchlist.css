@@ -167,6 +167,21 @@
     width: 1.5rem;
 }
 
+.pw-watchlist-detail-button.pw-watchlist-active {
+    background: transparent !important;
+    color: var(--pft-accent, #ff4f83) !important;
+}
+
+.pw-watchlist-detail-button.pw-watchlist-active .pw-watchlist-icon {
+    color: var(--pft-accent, #ff4f83) !important;
+}
+
+.pw-watchlist-detail-button.pw-watchlist-active .pw-watchlist-icon svg,
+.pw-watchlist-detail-button.pw-watchlist-active .pw-watchlist-icon path {
+    fill: currentColor !important;
+    stroke: currentColor !important;
+}
+
 .pw-watchlist-page {
     background: rgba(7, 7, 10, .82) !important;
     backdrop-filter: blur(5px);

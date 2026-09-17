@@ -6,10 +6,10 @@ const script = fs.readFileSync(path.join(root, 'src', 'PunisherWatchlist', 'Web'
 const style = fs.readFileSync(path.join(root, 'src', 'PunisherWatchlist', 'Web', 'punisher-watchlist.css'), 'utf8');
 const controller = fs.readFileSync(path.join(root, 'src', 'PunisherWatchlist', 'Api', 'WatchlistController.cs'), 'utf8');
 
-for (const token of ['PunisherWatchlist/items', 'pw-watchlist-tab', 'pw-watchlist-card-button', 'pw-watchlist-detail-button', 'MuiAppBar-root', 'favoriteButton', 'pw-watchlist-card-button-adjacent', 'pw-watchlist-drawer-link', 'placeAfterFavorites', 'document.querySelectorAll(".card")', 'localStorageKey', 'pw-watchlist-route-active', 'isLibraryFolderCard', 'updateUserDataFlag', 'pw-watchlist-card-actions', 'cleanAppHashUrl', 'leaveWatchlist', 'state.aliases', 'canonicalKey', 'canonicalClientId', 'normalizeStoredIds']) {
+for (const token of ['PunisherWatchlist/items', 'pw-watchlist-tab', 'pw-watchlist-card-button', 'pw-watchlist-detail-button', 'MuiAppBar-root', 'favoriteButton', 'pw-watchlist-card-button-adjacent', 'pw-watchlist-drawer-link', 'placeAfterFavorites', 'document.querySelectorAll(".card")', 'localStorageKey', 'pw-watchlist-route-active', 'isLibraryFolderCard', 'updateUserDataFlag', 'pw-watchlist-card-actions', 'cleanAppHashUrl', 'leaveWatchlist', 'state.aliases', 'canonicalKey', 'canonicalClientId', 'normalizeStoredIds', '"Season"', 'const seriesId = parentSeriesId(item)', 'state.aliases.set(normalizeId(itemId), seriesId)']) {
     if (!script.includes(token)) throw new Error(`Missing client feature: ${token}`);
 }
-for (const token of ['.pw-watchlist-page', '.pw-watchlist-button', '.pw-watchlist-grid', '.pw-watchlist-home-hidden > :not(.pw-watchlist-page)', '.pw-watchlist-card-button-adjacent:is(', '.card:hover .pw-watchlist-card-button', '@media (hover: none)']) {
+for (const token of ['.pw-watchlist-page', '.pw-watchlist-button', '.pw-watchlist-grid', '.pw-watchlist-home-hidden > :not(.pw-watchlist-page)', '.pw-watchlist-card-button-adjacent:is(', '.card:hover .pw-watchlist-card-button', '@media (hover: none)', '.pw-watchlist-detail-button.pw-watchlist-active']) {
     if (!style.includes(token)) throw new Error(`Missing stylesheet rule: ${token}`);
 }
 const normalizeMatch = script.match(/function normalizeId\(value\) \{\s*([\s\S]*?)\n    \}/);

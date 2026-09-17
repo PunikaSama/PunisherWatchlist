@@ -1,13 +1,13 @@
 (function () {
     "use strict";
 
-    if (window.__punisherWatchlistV109) return;
-    window.__punisherWatchlistV109 = true;
+    if (window.__punisherWatchlistV110) return;
+    window.__punisherWatchlistV110 = true;
 
     const isWatchlistRoute = () => location.search.includes("pw-watchlist=1") || location.hash.includes("pw-watchlist=1");
     if (isWatchlistRoute()) document.documentElement.classList.add("pw-watchlist-route-active");
 
-    const supportedTypes = new Set(["Movie", "Series", "Episode"]);
+    const supportedTypes = new Set(["Movie", "Series", "Season", "Episode"]);
     const state = {
         api: null,
         userId: "",
@@ -359,6 +359,8 @@
         await loadItems([itemId]);
         const item = state.itemCache.get(normalizeId(itemId));
         if (!isSupported(item)) return;
+        const seriesId = parentSeriesId(item);
+        if (seriesId) state.aliases.set(normalizeId(itemId), seriesId);
         const existing = host.querySelector(".pw-watchlist-detail-button");
         if (normalizeId(existing?.dataset?.pwItemId) === normalizeId(itemId)) {
             updateButton(existing, itemId);
