@@ -3,7 +3,34 @@
 }
 
 .pw-watchlist-tab {
-    min-width: 7rem;
+    flex: 0 0 auto;
+}
+
+.pw-watchlist-nav-link {
+    align-items: center;
+    color: inherit;
+    display: inline-flex;
+    gap: .42rem;
+    justify-content: center;
+    min-height: 2.5rem;
+    padding-inline: .7rem;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.pw-watchlist-nav-link.pw-watchlist-nav-active {
+    color: var(--pft-accent, #00a4dc) !important;
+}
+
+.pw-watchlist-nav-icon,
+.pw-watchlist-nav-icon svg {
+    display: block;
+    height: 1.35rem;
+    width: 1.35rem;
+}
+
+.pw-watchlist-nav-icon svg {
+    fill: currentColor;
 }
 
 .pw-watchlist-card-host {
@@ -53,13 +80,37 @@
 
 .pw-watchlist-card-button {
     border-radius: 50%;
-    height: 2.65rem;
+    height: 2.25rem;
+    opacity: 0;
     padding: 0;
+    pointer-events: none;
+    transform: translateY(.2rem);
+    transition: opacity .16s ease, transform .16s ease, visibility .16s ease;
+    visibility: hidden;
+    width: 2.25rem;
+    z-index: 8;
+}
+
+.pw-watchlist-card-button-adjacent {
+    margin-left: .15rem;
+    position: relative !important;
+}
+
+.pw-watchlist-card-button-fallback {
+    bottom: .55rem;
     position: absolute;
     right: .55rem;
-    top: .55rem;
-    width: 2.65rem;
-    z-index: 8;
+}
+
+.card:hover .pw-watchlist-card-button,
+.card:focus-within .pw-watchlist-card-button,
+.pw-watchlist-item:hover > .pw-watchlist-card-button,
+.pw-watchlist-item:focus-within > .pw-watchlist-card-button,
+.pw-watchlist-card-button:focus-visible {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+    visibility: visible;
 }
 
 .pw-watchlist-detail-button .detailButton-content {
@@ -138,7 +189,8 @@
 
 .pw-watchlist-item > .pw-watchlist-card-button {
     right: .55rem;
-    top: .55rem;
+    bottom: 3.15rem;
+    position: absolute;
 }
 
 .pw-watchlist-empty {
@@ -150,6 +202,11 @@
 }
 
 @media (max-width: 600px) {
+    .pw-watchlist-nav-link {
+        min-width: auto;
+        padding-inline: .55rem;
+    }
+
     .pw-watchlist-page {
         padding: 1rem .75rem 2rem;
     }
@@ -160,13 +217,22 @@
     }
 
     .pw-watchlist-card-button {
-        height: 2.35rem;
-        width: 2.35rem;
+        height: 2.15rem;
+        width: 2.15rem;
     }
 
     .pw-watchlist-icon,
     .pw-watchlist-icon svg {
         height: 1.25rem;
         width: 1.25rem;
+    }
+}
+
+@media (hover: none), (pointer: coarse) {
+    .pw-watchlist-card-button {
+        opacity: 1;
+        pointer-events: auto;
+        transform: none;
+        visibility: visible;
     }
 }

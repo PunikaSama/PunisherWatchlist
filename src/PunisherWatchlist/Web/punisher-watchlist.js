@@ -1,8 +1,8 @@
 (function () {
     "use strict";
 
-    if (window.__punisherWatchlistV1) return;
-    window.__punisherWatchlistV1 = true;
+    if (window.__punisherWatchlistV101) return;
+    window.__punisherWatchlistV101 = true;
 
     const supportedTypes = new Set(["Movie", "Series", "Episode"]);
     const state = {
@@ -16,7 +16,8 @@
         cardTimer: 0,
         observer: null,
         scheduleTimer: 0,
-        watchlistOpen: false
+        watchlistOpen: false,
+        watchlistRequested: false
     };
 
     const eyeSvg = active => `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5c-5.4 0-9.3 4.2-10.5 6.3a1.4 1.4 0 0 0 0 1.4C2.7 14.8 6.6 19 12 19s9.3-4.2 10.5-6.3a1.4 1.4 0 0 0 0-1.4C21.3 9.2 17.4 5 12 5Zm0 11.3A4.3 4.3 0 1 1 12 7.7a4.3 4.3 0 0 1 0 8.6Zm0-2.2a2.1 2.1 0 1 0 0-4.2 2.1 2.1 0 0 0 0 4.2Z"${active ? " fill=\"currentColor\"" : ""}/></svg>`;
@@ -163,6 +164,42 @@
         return button;
     }
 
+    function favoriteButton(card) {
+        const marker = card.querySelector([
+            "[data-isfavorite]",
+            "[data-is-favorite]",
+            "button[title*='favorite' i]",
+            "button[title*='favorit' i]",
+            "button[aria-label*='favorite' i]",
+            "button[aria-label*='favorit' i]",
+            ".favorite",
+            ".ratingbutton-icon-withrating"
+        ].join(","));
+        return marker?.matches?.("button") ? marker : marker?.closest?.("button");
+    }
+
+    function placeCardButton(card, itemId) {
+        const button = makeButton(itemId);
+        const favorite = favoriteButton(card);
+        if (favorite?.parentElement) {
+            button.classList.add("pw-watchlist-card-button-adjacent");
+            favorite.insertAdjacentElement("afterend", button);
+            return;
+        }
+
+        const actions = card.querySelector(".cardOverlayButtons, .cardOverlayButtonContainer, .cardIndicators");
+        if (actions) {
+            button.classList.add("pw-watchlist-card-button-adjacent");
+            actions.appendChild(button);
+            return;
+        }
+
+        const host = card.querySelector(".cardBox, .cardScalable") || card;
+        host.classList.add("pw-watchlist-card-host");
+        button.classList.add("pw-watchlist-card-button-fallback");
+        host.appendChild(button);
+    }
+
     async function ensureDetailButton() {
         const page = document.querySelector("#itemDetailPage:not(.hide)");
         const host = page?.querySelector(".mainDetailButtons");
@@ -200,9 +237,7 @@
                 if (!isSupported(state.itemCache.get(key))) continue;
                 for (const card of cards) {
                     if (!card.isConnected || card.querySelector(":scope .pw-watchlist-card-button")) continue;
-                    const host = card.querySelector(".cardBox, .cardScalable") || card;
-                    host.classList.add("pw-watchlist-card-host");
-                    host.appendChild(makeButton(cardId(card)));
+                    placeCardButton(card, cardId(card));
                 }
             }
         } catch {
@@ -218,56 +253,96 @@
         return [...document.querySelectorAll(".homeSectionsContainer, [data-testid='home-sections'], [class*='homeSectionsContainer']")].find(visible) || null;
     }
 
-    function tabHost() {
-        const home = homeContainer();
-        if (!home) return null;
-        return [...document.querySelectorAll(".emby-tabs-slider, [role='tablist']")]
-            .find(element => visible(element) && element.querySelector("button, [role='tab']")) || null;
+    function navigationHosts() {
+        const hosts = new Set();
+        document.querySelectorAll(".headerTabs").forEach(headerTabs => {
+            const host = headerTabs.querySelector(".emby-tabs-slider") || headerTabs;
+            if (visible(host)) hosts.add(host);
+        });
+        document.querySelectorAll(".MuiBottomNavigation-root, [class*='MuiBottomNavigation-root']").forEach(host => {
+            if (visible(host)) hosts.add(host);
+        });
+        document.querySelectorAll("header nav, .skinHeader nav, .MuiDrawer-root nav, [class*='MuiDrawer-root'] nav").forEach(host => {
+            if (visible(host) && host.querySelectorAll("a[href], button").length >= 2) hosts.add(host);
+        });
+
+        document.querySelectorAll(".MuiAppBar-root, [class*='MuiAppBar-root']").forEach(appBar => {
+            if (!visible(appBar)) return;
+            const links = [...appBar.querySelectorAll("a[href], button")].filter(link => {
+                const text = link.textContent?.trim() || "";
+                return text && !link.classList.contains("pft-brand-button") && !/^PunisherFin$/i.test(text);
+            });
+            if (!links.length) return;
+            let host = links[0].parentElement;
+            while (host && host !== appBar && host.querySelectorAll("a[href], button").length < 2) host = host.parentElement;
+            if (host) hosts.add(host);
+        });
+        return [...hosts];
+    }
+
+    function makeNavigationLink(host) {
+        const sample = host.querySelector("a[href]:not(.pft-brand-button), button:not(.pw-watchlist-tab)");
+        const tab = document.createElement("a");
+        tab.href = "#/home.html?pw-watchlist=1";
+        tab.className = `${sample?.className || "emby-tab-button emby-button"} pw-watchlist-tab pw-watchlist-nav-link`;
+        tab.setAttribute("role", sample?.getAttribute("role") || "tab");
+        tab.innerHTML = `<span class="pw-watchlist-nav-icon">${eyeSvg(true)}</span><span class="pw-watchlist-nav-label">Watchlist</span>`;
+        tab.addEventListener("click", event => {
+            event.preventDefault();
+            state.watchlistRequested = true;
+            if (!location.hash.includes("pw-watchlist=1")) location.hash = "/home.html?pw-watchlist=1";
+            schedule();
+        });
+        return tab;
     }
 
     function ensureWatchlistTab() {
-        const host = tabHost();
-        if (!host) return;
-        let tab = host.querySelector(".pw-watchlist-tab");
-        if (!tab) {
-            tab = document.createElement("button");
-            tab.type = "button";
-            tab.className = "emby-tab-button emby-button pw-watchlist-tab";
-            tab.setAttribute("role", "tab");
-            tab.innerHTML = "<span>Watchlist</span>";
-            tab.addEventListener("click", event => {
-                event.preventDefault();
-                void openWatchlist(tab);
-            });
-            host.appendChild(tab);
+        for (const host of navigationHosts()) {
+            let tab = host.querySelector(":scope > .pw-watchlist-tab");
+            if (!tab) {
+                tab = makeNavigationLink(host);
+                host.appendChild(tab);
+            }
+            tab.classList.toggle("emby-tab-button-active", state.watchlistOpen);
+            tab.classList.toggle("pw-watchlist-nav-active", state.watchlistOpen);
+            tab.setAttribute("aria-selected", String(state.watchlistOpen));
         }
-        tab.classList.toggle("emby-tab-button-active", state.watchlistOpen);
-        tab.setAttribute("aria-selected", String(state.watchlistOpen));
     }
 
-    async function openWatchlist(tab) {
+    async function openWatchlist() {
         const home = homeContainer();
-        if (!home) return;
+        if (!home) {
+            state.watchlistRequested = true;
+            return;
+        }
+        const needsRender = !state.watchlistOpen || !home.parentElement?.querySelector(":scope > .pw-watchlist-page");
         state.watchlistOpen = true;
+        state.watchlistRequested = true;
         home.classList.add("pw-watchlist-home-hidden");
-        tab.parentElement?.querySelectorAll(".emby-tab-button-active, [aria-selected='true']").forEach(other => {
-            if (other !== tab) {
-                other.classList.remove("emby-tab-button-active");
-                other.setAttribute("aria-selected", "false");
+        document.querySelectorAll(".pw-watchlist-tab").forEach(tab => {
+            tab.parentElement?.querySelectorAll(".emby-tab-button-active, [aria-selected='true']").forEach(other => {
+                if (other !== tab) {
+                    other.classList.remove("emby-tab-button-active");
+                    other.setAttribute("aria-selected", "false");
+                }
+            });
+            if (tab) {
+                tab.classList.add("emby-tab-button-active", "pw-watchlist-nav-active");
+                tab.setAttribute("aria-selected", "true");
             }
         });
-        tab.classList.add("emby-tab-button-active");
-        tab.setAttribute("aria-selected", "true");
-        await renderWatchlist();
+        if (needsRender) await renderWatchlist();
     }
 
     function closeWatchlist() {
+        state.watchlistRequested = false;
         if (!state.watchlistOpen) return;
         state.watchlistOpen = false;
         document.querySelectorAll(".pw-watchlist-home-hidden").forEach(element => element.classList.remove("pw-watchlist-home-hidden"));
         document.querySelectorAll(".pw-watchlist-page").forEach(element => element.remove());
         document.querySelectorAll(".pw-watchlist-tab").forEach(tab => {
             tab.classList.remove("emby-tab-button-active");
+            tab.classList.remove("pw-watchlist-nav-active");
             tab.setAttribute("aria-selected", "false");
         });
     }
@@ -325,7 +400,9 @@
         ensureWatchlistTab();
         ensureCardButtons();
         await ensureDetailButton();
-        if (state.watchlistOpen) {
+        if (state.watchlistRequested || location.hash.includes("pw-watchlist=1")) {
+            await openWatchlist();
+        } else if (state.watchlistOpen) {
             const home = homeContainer();
             if (home) home.classList.add("pw-watchlist-home-hidden"); else closeWatchlist();
         }
@@ -344,12 +421,19 @@
         state.observer = new MutationObserver(schedule);
         state.observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["class", "data-id"] });
         document.addEventListener("click", event => {
-            const tab = event.target instanceof Element ? event.target.closest(".emby-tab-button, [role='tab']") : null;
+            const tab = event.target instanceof Element ? event.target.closest(".emby-tab-button, [role='tab'], .MuiButtonBase-root") : null;
             if (tab && !tab.classList.contains("pw-watchlist-tab")) closeWatchlist();
         }, true);
-        document.addEventListener("viewshow", () => { closeWatchlist(); schedule(); });
-        window.addEventListener("hashchange", () => { closeWatchlist(); schedule(); });
-        window.addEventListener("popstate", () => { closeWatchlist(); schedule(); });
+        document.addEventListener("viewshow", () => {
+            if (!location.hash.includes("pw-watchlist=1")) closeWatchlist();
+            schedule();
+        });
+        window.addEventListener("hashchange", () => {
+            state.watchlistRequested = location.hash.includes("pw-watchlist=1");
+            if (!state.watchlistRequested) closeWatchlist();
+            schedule();
+        });
+        window.addEventListener("popstate", schedule);
         schedule();
     }
 

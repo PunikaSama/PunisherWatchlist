@@ -9,6 +9,14 @@
     "imageUrl": "https://raw.githubusercontent.com/PunikaSama/PunisherWatchlist/main/PunisherWatchlist.png",
     "versions": [
       {
+        "version": "1.0.1.0",
+        "changelog": "Adds the Watchlist entry to Jellyfin 12's modern top navigation and mobile navigation. Moves card eye controls beside Jellyfin's favorite heart and only reveals them on card hover or keyboard focus on desktop while keeping them accessible on touch devices.",
+        "targetAbi": "12.1.0.0",
+        "sourceUrl": "https://github.com/PunikaSama/PunisherWatchlist/releases/download/v1.0.1.0/PunisherWatchlist_1.0.1.0.zip",
+        "checksum": "50e52145af0b351c4103ddddb766b009",
+        "timestamp": "2026-09-17 23:23:33"
+      },
+      {
         "version": "1.0.0.0",
         "changelog": "Initial release with per-user server-side Watchlists, eye buttons on cards and detail pages, a dedicated home-screen Watchlist tab, and PunisherFinTheme integration.",
         "targetAbi": "12.1.0.0",
