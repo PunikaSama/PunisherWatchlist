@@ -1,0 +1,21 @@
+[
+  {
+    "guid": "35e8ff4a-837e-47ed-89e9-b4bda3a0359d",
+    "name": "PunisherWatchlist",
+    "overview": "Personal Watchlists for Jellyfin Web.",
+    "description": "Adds eye buttons to movies, series, and episodes plus a personal Watchlist tab on the Jellyfin home screen.",
+    "owner": "PunisherSama",
+    "category": "General",
+    "imageUrl": "https://raw.githubusercontent.com/PunikaSama/PunisherWatchlist/main/logo.svg",
+    "versions": [
+      {
+        "version": "1.0.0.0",
+        "changelog": "Initial release with per-user server-side Watchlists, eye buttons on cards and detail pages, a dedicated home-screen Watchlist tab, and PunisherFinTheme integration.",
+        "targetAbi": "12.1.0.0",
+        "sourceUrl": "https://github.com/PunikaSama/PunisherWatchlist/releases/download/v1.0.0.0/PunisherWatchlist_1.0.0.0.zip",
+        "checksum": "c8d85a4ba1d089d0f47abc3b18b45486",
+        "timestamp": "2026-09-17 23:08:52"
+      }
+    ]
+  }
+]

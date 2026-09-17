@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="src/PunisherWatchlist/PunisherWatchlist.csproj" />
+  <Project Path="tests/PunisherWatchlist.Tests/PunisherWatchlist.Tests.csproj" />
+</Solution>
+
