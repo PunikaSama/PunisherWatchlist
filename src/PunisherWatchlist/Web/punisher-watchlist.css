@@ -162,14 +162,19 @@
 }
 
 .pw-watchlist-page {
-    background: transparent !important;
+    background: rgba(7, 7, 10, .82) !important;
+    backdrop-filter: blur(5px);
     box-sizing: border-box;
-    margin: 0 auto;
-    max-width: 1600px;
-    min-height: 45vh;
-    padding: 1.5rem 4%;
+    bottom: 0;
+    left: 0;
+    margin: 0;
+    overflow: auto;
+    padding: 4.75rem max(4%, calc((100% - 1600px) / 2)) 2rem;
+    position: fixed;
+    right: 0;
+    top: 0;
     width: 100%;
-    z-index: 1;
+    z-index: 8;
 }
 
 .pw-watchlist-drawer-link .pw-watchlist-nav-icon {
@@ -223,6 +228,108 @@
     background-size: cover;
     border-radius: .55rem;
     box-shadow: 0 .35rem 1rem rgba(0, 0, 0, .35);
+    overflow: hidden;
+    position: relative;
+}
+
+.pw-watchlist-poster-link {
+    inset: 0;
+    position: absolute;
+    z-index: 1;
+}
+
+.pw-watchlist-count {
+    align-items: center;
+    background: var(--pft-accent, #f34f83);
+    border-radius: 50%;
+    color: #fff;
+    display: flex;
+    font-size: .78rem;
+    font-weight: 700;
+    height: 2rem;
+    justify-content: center;
+    position: absolute;
+    right: .35rem;
+    top: .35rem;
+    width: 2rem;
+    z-index: 4;
+}
+
+.pw-watchlist-play {
+    color: #fff;
+    height: 2.75rem;
+    left: 50%;
+    opacity: 0;
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    transition: opacity .16s ease;
+    width: 2.75rem;
+    z-index: 4;
+}
+
+.pw-watchlist-play svg {
+    height: 100%;
+    width: 100%;
+}
+
+.pw-watchlist-card-actions {
+    align-items: center;
+    bottom: .25rem;
+    display: flex;
+    opacity: 0;
+    position: absolute;
+    right: .2rem;
+    transition: opacity .16s ease;
+    z-index: 5;
+}
+
+.pw-watchlist-item:hover .pw-watchlist-play,
+.pw-watchlist-item:focus-within .pw-watchlist-play,
+.pw-watchlist-item:hover .pw-watchlist-card-actions,
+.pw-watchlist-item:focus-within .pw-watchlist-card-actions {
+    opacity: 1;
+}
+
+.pw-watchlist-card-actions .pw-native-card-action,
+.pw-watchlist-card-actions .pw-watchlist-card-button {
+    align-items: center;
+    background: transparent !important;
+    border: 0;
+    color: rgba(255, 255, 255, .82) !important;
+    cursor: pointer;
+    display: flex;
+    height: auto;
+    justify-content: center;
+    opacity: 1;
+    padding: .25em;
+    pointer-events: auto;
+    position: relative !important;
+    text-decoration: none;
+    transform: none;
+    visibility: visible;
+    width: auto;
+}
+
+.pw-watchlist-card-actions .cardOverlayButtonIcon {
+    align-items: center;
+    background: transparent !important;
+    display: flex;
+    height: 1.5em !important;
+    justify-content: center;
+    width: 1.5em !important;
+}
+
+.pw-watchlist-card-actions svg {
+    height: 1em;
+    width: 1em;
+}
+
+.pw-watchlist-card-actions .pw-native-card-action:hover,
+.pw-watchlist-card-actions .pw-native-card-action-active,
+.pw-watchlist-card-actions .pw-watchlist-card-button:hover,
+.pw-watchlist-card-actions .pw-watchlist-card-button.pw-watchlist-active {
+    color: var(--pft-accent, #ff4f83) !important;
 }
 
 .pw-watchlist-name {
@@ -237,12 +344,6 @@
 .pw-watchlist-meta {
     font-size: .82rem;
     margin-top: .2rem;
-}
-
-.pw-watchlist-item > .pw-watchlist-card-button {
-    right: .55rem;
-    bottom: 3.15rem;
-    position: absolute;
 }
 
 .pw-watchlist-empty {
@@ -260,7 +361,7 @@
     }
 
     .pw-watchlist-page {
-        padding: 1rem .75rem 2rem;
+        padding: 4.5rem .75rem 2rem;
     }
 
     .pw-watchlist-grid {
@@ -281,5 +382,10 @@
         pointer-events: auto;
         transform: none;
         visibility: visible;
+    }
+
+    .pw-watchlist-play,
+    .pw-watchlist-card-actions {
+        opacity: 1;
     }
 }

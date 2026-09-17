@@ -1,10 +1,10 @@
 (function () {
     "use strict";
 
-    if (window.__punisherWatchlistV104) return;
-    window.__punisherWatchlistV104 = true;
+    if (window.__punisherWatchlistV105) return;
+    window.__punisherWatchlistV105 = true;
 
-    const isWatchlistRoute = () => location.hash.includes("pw-watchlist=1");
+    const isWatchlistRoute = () => location.search.includes("pw-watchlist=1") || location.hash.includes("pw-watchlist=1");
     if (isWatchlistRoute()) document.documentElement.classList.add("pw-watchlist-route-active");
 
     const supportedTypes = new Set(["Movie", "Series", "Episode"]);
@@ -20,6 +20,13 @@
         watchlistOpen: false,
         watchlistRequested: isWatchlistRoute()
     };
+
+    if (isWatchlistRoute() && document.body && !document.querySelector("body > .pw-watchlist-page")) {
+        const initialPage = document.createElement("section");
+        initialPage.className = "pw-watchlist-page";
+        initialPage.innerHTML = "<div class='pw-watchlist-heading'><h2>Watchlist</h2><span>Loading&hellip;</span></div>";
+        document.body.appendChild(initialPage);
+    }
 
     const eyeSvg = active => `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5c-5.4 0-9.3 4.2-10.5 6.3a1.4 1.4 0 0 0 0 1.4C2.7 14.8 6.6 19 12 19s9.3-4.2 10.5-6.3a1.4 1.4 0 0 0 0-1.4C21.3 9.2 17.4 5 12 5Zm0 11.3A4.3 4.3 0 1 1 12 7.7a4.3 4.3 0 0 1 0 8.6Zm0-2.2a2.1 2.1 0 1 0 0-4.2 2.1 2.1 0 0 0 0 4.2Z"${active ? " fill=\"currentColor\"" : ""}/></svg>`;
 
@@ -107,6 +114,16 @@
         }
     }
 
+    function isLibraryFolderCard(card) {
+        const type = card?.dataset?.type || card?.dataset?.itemType || card?.getAttribute?.("data-type") || "";
+        if (/^(CollectionFolder|UserView|AggregateFolder|BoxSet|Playlist)$/i.test(type)) return true;
+        return [...(card?.querySelectorAll?.("a[href]") || [])].some(link => {
+            const href = link.getAttribute("href") || "";
+            return /#\/(movies|tv|music|livetv|home)(?:\?|$)/i.test(href)
+                && /(?:topParentId|collectionType|parentId)=/i.test(href);
+        });
+    }
+
     function currentDetailItemId() {
         const page = document.querySelector("#itemDetailPage:not(.hide)");
         const direct = page?.dataset?.id || page?.getAttribute("data-id");
@@ -122,7 +139,8 @@
             UserId: state.userId,
             Ids: missing.join(","),
             Fields: "PrimaryImageAspectRatio,Overview,ProductionYear",
-            EnableImages: true
+            EnableImages: true,
+            EnableUserData: true
         });
         for (const item of result?.Items || result?.items || []) {
             state.itemCache.set(String(item.Id || item.id).toLowerCase(), item);
@@ -131,6 +149,22 @@
 
     function isSupported(item) {
         return supportedTypes.has(item?.Type || item?.type);
+    }
+
+    function watchlistUrl() {
+        const url = new URL(location.href);
+        url.searchParams.set("pw-watchlist", "1");
+        return `${url.pathname}${url.search}${url.hash.replace(/([?&])pw-watchlist=1(&|$)/, (_match, lead, tail) => tail ? lead : "")}`;
+    }
+
+    function removeWatchlistUrlMarker() {
+        if (!isWatchlistRoute()) return;
+        const url = new URL(location.href);
+        url.searchParams.delete("pw-watchlist");
+        const cleanHash = url.hash
+            .replace(/([?&])pw-watchlist=1(&|$)/, (_match, lead, tail) => tail ? lead : "")
+            .replace(/[?&]$/, "");
+        history.replaceState(history.state, "", `${url.pathname}${url.search}${cleanHash}`);
     }
 
     async function toggle(itemId, button) {
@@ -260,7 +294,7 @@
     }
 
     function queueCard(card) {
-        if (!(card instanceof HTMLElement) || card.closest(".pw-watchlist-page") || card.querySelector(":scope .pw-watchlist-card-button")) return;
+        if (!(card instanceof HTMLElement) || card.closest(".pw-watchlist-page") || isLibraryFolderCard(card) || card.querySelector(":scope .pw-watchlist-card-button")) return;
         const itemId = cardId(card);
         if (!itemId) return;
         placeCardButton(card, itemId);
@@ -305,7 +339,7 @@
     function makeNavigationLink(host) {
         const sample = host.querySelector("a[href]:not(.pft-brand-button), button:not(.pw-watchlist-tab)");
         const tab = document.createElement("a");
-        tab.href = "#/home?pw-watchlist=1";
+        tab.href = "?pw-watchlist=1";
         tab.className = `${sample?.className || "emby-tab-button emby-button"} pw-watchlist-tab pw-watchlist-nav-link`;
         tab.setAttribute("role", sample?.getAttribute("role") || "tab");
         tab.innerHTML = `<span class="pw-watchlist-nav-icon">${eyeSvg(true)}</span><span class="pw-watchlist-nav-label">Watchlist</span>`;
@@ -332,9 +366,9 @@
     function activateWatchlistRoute() {
         state.watchlistRequested = true;
         document.documentElement.classList.add("pw-watchlist-route-active");
-        if (!location.hash.includes("pw-watchlist=1")) location.hash = "/home?pw-watchlist=1";
+        if (!isWatchlistRoute()) history.pushState({ ...(history.state || {}), punisherWatchlist: true }, "", watchlistUrl());
         document.querySelector(".MuiBackdrop-root, [class*='MuiBackdrop-root']")?.click?.();
-        schedule();
+        void openWatchlist();
     }
 
     function ensureWatchlistTab() {
@@ -363,7 +397,7 @@
                 link.querySelectorAll("[id]").forEach(element => element.removeAttribute("id"));
                 link.classList.add("pw-watchlist-tab", "pw-watchlist-drawer-link");
                 link.classList.remove("Mui-selected", "navMenuOption-selected", "selected");
-                link.href = "#/home?pw-watchlist=1";
+                link.href = "?pw-watchlist=1";
                 link.removeAttribute("aria-current");
                 const icon = link.querySelector(".MuiListItemIcon-root, [class*='MuiListItemIcon-root'], .listItemIcon");
                 if (icon) icon.innerHTML = `<span class="pw-watchlist-nav-icon">${eyeSvg(true)}</span>`;
@@ -381,16 +415,10 @@
     }
 
     async function openWatchlist() {
-        const home = homeContainer();
-        if (!home) {
-            state.watchlistRequested = true;
-            return;
-        }
-        const needsRender = !state.watchlistOpen || !home.querySelector(":scope > .pw-watchlist-page");
+        const needsRender = !state.watchlistOpen || !document.querySelector("body > .pw-watchlist-page");
         state.watchlistOpen = true;
         state.watchlistRequested = true;
         document.documentElement.classList.add("pw-watchlist-route-active");
-        home.classList.add("pw-watchlist-home-hidden");
         document.querySelectorAll(".pw-watchlist-tab").forEach(tab => {
             tab.parentElement?.querySelectorAll(".emby-tab-button-active, [aria-selected='true']").forEach(other => {
                 if (other !== tab) {
@@ -403,15 +431,15 @@
                 tab.setAttribute("aria-selected", "true");
             }
         });
-        if (needsRender) await renderWatchlist(home);
+        if (needsRender) await renderWatchlist();
     }
 
-    function closeWatchlist() {
+    function closeWatchlist(clearUrl = true) {
         state.watchlistRequested = false;
         document.documentElement.classList.remove("pw-watchlist-route-active");
+        if (clearUrl) removeWatchlistUrlMarker();
         if (!state.watchlistOpen) return;
         state.watchlistOpen = false;
-        document.querySelectorAll(".pw-watchlist-home-hidden").forEach(element => element.classList.remove("pw-watchlist-home-hidden"));
         document.querySelectorAll(".pw-watchlist-page").forEach(element => element.remove());
         document.querySelectorAll(".pw-watchlist-tab").forEach(tab => {
             tab.classList.remove("emby-tab-button-active");
@@ -420,13 +448,12 @@
         });
     }
 
-    async function renderWatchlist(home = homeContainer()) {
-        if (!home) return;
-        let page = home.querySelector(":scope > .pw-watchlist-page");
+    async function renderWatchlist() {
+        let page = document.querySelector("body > .pw-watchlist-page");
         if (!page) {
             page = document.createElement("section");
             page.className = "pw-watchlist-page";
-            home.appendChild(page);
+            document.body.appendChild(page);
         }
         page.innerHTML = "<div class='pw-watchlist-heading'><h2>Watchlist</h2><span>Loading&hellip;</span></div>";
         const loaded = await loadState(true);
@@ -452,11 +479,57 @@
         for (const item of items) grid.appendChild(watchlistCard(item));
     }
 
+    const actionSvg = {
+        played: active => `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12.5 4.2 4.2L19.5 6.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4"${active ? "" : " opacity=\".72\""}/></svg>`,
+        favorite: active => `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.2 4.2 12.8A5.1 5.1 0 0 1 11.4 5l.6.7.6-.7a5.1 5.1 0 0 1 7.2 7.8Z" fill="${active ? "currentColor" : "none"}" stroke="currentColor" stroke-linejoin="round" stroke-width="1.8"/></svg>`,
+        more: () => `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg>`,
+        play: () => `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 5 11 7-11 7Z" fill="currentColor"/></svg>`
+    };
+
+    function makeItemAction(label, icon, active, handler) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "paper-icon-button-light cardOverlayButton cardOverlayButton-hover itemAction pw-native-card-action";
+        button.title = label;
+        button.setAttribute("aria-label", label);
+        button.setAttribute("aria-pressed", String(active));
+        button.innerHTML = `<span class="cardOverlayButtonIcon cardOverlayButtonIcon-hover">${actionSvg[icon](active)}</span>`;
+        if (active) button.classList.add("pw-native-card-action-active");
+        button.addEventListener("click", event => {
+            event.preventDefault();
+            event.stopPropagation();
+            void handler(button);
+        });
+        return button;
+    }
+
+    async function updateUserDataFlag(item, button, property, path) {
+        const data = item.UserData || item.userData || (item.UserData = {});
+        const camelProperty = property.charAt(0).toLowerCase() + property.slice(1);
+        const desired = !Boolean(data[property] ?? data[camelProperty]);
+        data[property] = desired;
+        data[camelProperty] = desired;
+        button.classList.toggle("pw-native-card-action-active", desired);
+        button.setAttribute("aria-pressed", String(desired));
+        button.querySelector(".cardOverlayButtonIcon").innerHTML = actionSvg[property === "IsFavorite" ? "favorite" : "played"](desired);
+        try {
+            await apiJson(path, desired ? "POST" : "DELETE");
+        } catch (error) {
+            data[property] = !desired;
+            data[camelProperty] = !desired;
+            button.classList.toggle("pw-native-card-action-active", !desired);
+            button.setAttribute("aria-pressed", String(!desired));
+            button.querySelector(".cardOverlayButtonIcon").innerHTML = actionSvg[property === "IsFavorite" ? "favorite" : "played"](!desired);
+            console.error(`PunisherWatchlist could not update ${property}.`, error);
+        }
+    }
+
     function watchlistCard(item) {
         const id = String(item.Id || item.id);
         const title = item.Name || item.name || "Untitled";
+        const userData = item.UserData || item.userData || {};
         const card = document.createElement("article");
-        card.className = "pw-watchlist-item";
+        card.className = "card pw-watchlist-item";
         const link = document.createElement("a");
         link.href = `#/details?id=${encodeURIComponent(id)}`;
         link.className = "pw-watchlist-item-link";
@@ -464,14 +537,48 @@
         image.className = "pw-watchlist-image";
         const imageUrl = state.api.getImageUrl?.(id, { type: "Primary", maxWidth: 480, quality: 90 });
         if (imageUrl) image.style.backgroundImage = `url("${String(imageUrl).replace(/"/g, "%22")}")`;
+        const posterLink = document.createElement("a");
+        posterLink.href = link.href;
+        posterLink.className = "pw-watchlist-poster-link";
+        posterLink.setAttribute("aria-label", title);
+        image.appendChild(posterLink);
         const name = document.createElement("div");
         name.className = "pw-watchlist-name";
         name.textContent = title;
         const meta = document.createElement("div");
         meta.className = "pw-watchlist-meta";
         meta.textContent = [item.Type || item.type, item.ProductionYear || item.productionYear].filter(Boolean).join(" · ");
-        link.append(image, name, meta);
-        card.append(link, makeButton(id));
+        const count = userData.UnplayedItemCount ?? userData.unplayedItemCount ?? item.RecursiveItemCount ?? item.recursiveItemCount;
+        if (Number.isFinite(Number(count)) && Number(count) > 0) {
+            const badge = document.createElement("span");
+            badge.className = "pw-watchlist-count";
+            badge.textContent = String(count);
+            image.appendChild(badge);
+        }
+        const play = document.createElement("a");
+        play.href = link.href;
+        play.className = "pw-watchlist-play";
+        play.title = "Play";
+        play.setAttribute("aria-label", `Play ${title}`);
+        play.innerHTML = actionSvg.play();
+        image.appendChild(play);
+        const actions = document.createElement("div");
+        actions.className = "pw-watchlist-card-actions";
+        actions.append(
+            makeItemAction("Mark played", "played", Boolean(userData.Played ?? userData.played), button => updateUserDataFlag(item, button, "Played", `/Users/${encodeURIComponent(state.userId)}/PlayedItems/${encodeURIComponent(id)}`)),
+            makeItemAction("Favorite", "favorite", Boolean(userData.IsFavorite ?? userData.isFavorite), button => updateUserDataFlag(item, button, "IsFavorite", `/Users/${encodeURIComponent(state.userId)}/FavoriteItems/${encodeURIComponent(id)}`)),
+            makeButton(id)
+        );
+        const more = document.createElement("a");
+        more.href = link.href;
+        more.className = "paper-icon-button-light cardOverlayButton cardOverlayButton-hover itemAction pw-native-card-action";
+        more.title = "More details";
+        more.setAttribute("aria-label", `More details for ${title}`);
+        more.innerHTML = `<span class="cardOverlayButtonIcon cardOverlayButtonIcon-hover">${actionSvg.more()}</span>`;
+        actions.appendChild(more);
+        image.appendChild(actions);
+        link.append(name, meta);
+        card.append(image, link);
         return card;
     }
 
@@ -480,17 +587,14 @@
         if (!state.api || !state.api.getCurrentUserId?.()) return;
         ensureWatchlistTab();
         ensureCardButtons();
-        const wantsWatchlist = state.watchlistRequested || location.hash.includes("pw-watchlist=1");
+        const wantsWatchlist = state.watchlistRequested || isWatchlistRoute();
         if (wantsWatchlist) {
             await openWatchlist();
         } else {
             await loadState();
         }
         await ensureDetailButton();
-        if (!wantsWatchlist && state.watchlistOpen) {
-            const home = homeContainer();
-            if (home) home.classList.add("pw-watchlist-home-hidden"); else closeWatchlist();
-        }
+        if (!wantsWatchlist && state.watchlistOpen) closeWatchlist(false);
     }
 
     function schedule() {
@@ -510,15 +614,19 @@
             if (tab && !tab.classList.contains("pw-watchlist-tab")) closeWatchlist();
         }, true);
         document.addEventListener("viewshow", () => {
-            if (!location.hash.includes("pw-watchlist=1")) closeWatchlist();
+            if (!isWatchlistRoute()) closeWatchlist(false);
             schedule();
         });
         window.addEventListener("hashchange", () => {
-            state.watchlistRequested = location.hash.includes("pw-watchlist=1");
-            if (!state.watchlistRequested) closeWatchlist();
+            state.watchlistRequested = isWatchlistRoute();
+            if (!state.watchlistRequested) closeWatchlist(false);
             schedule();
         });
-        window.addEventListener("popstate", schedule);
+        window.addEventListener("popstate", () => {
+            state.watchlistRequested = isWatchlistRoute();
+            if (!state.watchlistRequested) closeWatchlist(false);
+            schedule();
+        });
         schedule();
     }
 

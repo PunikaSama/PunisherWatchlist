@@ -9,6 +9,14 @@
     "imageUrl": "https://raw.githubusercontent.com/PunikaSama/PunisherWatchlist/main/PunisherWatchlist.png",
     "versions": [
       {
+        "version": "1.0.5.0",
+        "changelog": "Turns Watchlist into an instant standalone history page without navigating through Home, preventing Home content flashes. Adds native-style played, favorite, play, Watchlist, and details controls plus unwatched episode badges to Watchlist cards, and excludes Jellyfin library-folder cards from the Watchlist eye action.",
+        "targetAbi": "12.1.0.0",
+        "sourceUrl": "https://github.com/PunikaSama/PunisherWatchlist/releases/download/v1.0.5.0/PunisherWatchlist_1.0.5.0.zip",
+        "checksum": "7e8364eba77679762ade147611e9bb01",
+        "timestamp": "2026-09-18 00:45:00"
+      },
+      {
         "version": "1.0.4.0",
         "changelog": "Adds Watchlist eyes to library cards without waiting for metadata lookups, uses Jellyfin's user-scoped item lookup for stored entries, replaces toggle calls with explicit add and remove operations, adds an immediate per-user browser cache, and loads the Watchlist client before Jellyfin's application scripts to prevent the home screen from flashing.",
         "targetAbi": "12.1.0.0",
