@@ -22,7 +22,13 @@ PunisherWatchlist adds a separate, personal Watchlist to Jellyfin Web. Movies, s
 
 ## Installation
 
-Download `PunisherWatchlist_1.0.0.0.zip` from Releases, extract it into a `PunisherWatchlist` directory below Jellyfin's plugin directory, and restart Jellyfin. File Transformation must also be installed and enabled because it loads the Watchlist client into Jellyfin Web.
+Add this repository URL under **Dashboard → Plugins → Repositories**:
+
+```text
+https://raw.githubusercontent.com/PunikaSama/PunisherWatchlist/main/manifest.json
+```
+
+Open the plugin catalog, install PunisherWatchlist, and restart Jellyfin completely. File Transformation 3.0.0.0 must also be installed and enabled because it loads the Watchlist client into Jellyfin Web. After the restart, refresh the browser with `Ctrl + F5`.
 
 ## Build
 
