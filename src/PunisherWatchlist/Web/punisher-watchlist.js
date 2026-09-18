@@ -1,8 +1,8 @@
 (function () {
     "use strict";
 
-    if (window.__punisherWatchlistV120) return;
-    window.__punisherWatchlistV120 = true;
+    if (window.__punisherWatchlistV121) return;
+    window.__punisherWatchlistV121 = true;
 
     const isWatchlistRoute = () => location.search.includes("pw-watchlist=1") || location.hash.includes("pw-watchlist=1");
     if (isWatchlistRoute()) document.documentElement.classList.add("pw-watchlist-route-active");
@@ -245,16 +245,24 @@
         return /^#\/list(?:[?]|$)/i.test(location.hash) && /[?&]pw-watchlist=1(?:&|$)/i.test(location.hash);
     }
 
+    function immediateToggleKey(itemId, button) {
+        const sourceKey = normalizeId(itemId);
+        const buttonKey = normalizeId(button?.dataset?.pwCanonicalId);
+        const itemType = button?.dataset?.pwItemType || "";
+        if (!buttonKey) return "";
+        if (buttonKey !== sourceKey) return buttonKey;
+        return /^(Episode|Season)$/i.test(itemType) ? "" : buttonKey;
+    }
+
     async function toggle(itemId, button) {
         if (!itemId || button?.dataset?.busy === "true") return;
         if (button) button.dataset.busy = "true";
         const sourceKey = normalizeId(itemId);
-        const buttonKey = normalizeId(button?.dataset?.pwCanonicalId);
-        const effectiveKey = buttonKey && buttonKey !== sourceKey ? buttonKey : await canonicalClientId(itemId);
+        const effectiveKey = immediateToggleKey(itemId, button) || await canonicalClientId(itemId);
         const desired = !state.ids.has(effectiveKey);
         if (desired) addNewest(effectiveKey); else state.ids.delete(effectiveKey);
         writeLocalIds();
-        syncAllButtons();
+        syncCanonicalButtons(effectiveKey);
         try {
             const result = await apiJson(`/PunisherWatchlist/items/${encodeURIComponent(effectiveKey)}`, desired ? "PUT" : "DELETE");
             const active = result?.InWatchlist ?? result?.inWatchlist ?? desired;
@@ -264,11 +272,15 @@
             state.ids.delete(effectiveKey);
             if (active) addNewest(canonicalKey); else state.ids.delete(canonicalKey);
             writeLocalIds();
-            syncAllButtons();
+            syncButtons(itemId);
+            syncCanonicalButtons(canonicalKey);
             document.dispatchEvent(new CustomEvent("punisherwatchlistchange", { detail: { itemId, active } }));
             if (state.watchlistOpen) refreshWatchlistView();
         } catch (error) {
             console.error("PunisherWatchlist could not update the item.", error);
+            if (desired) state.ids.delete(effectiveKey); else addNewest(effectiveKey);
+            writeLocalIds();
+            syncCanonicalButtons(effectiveKey);
             button?.classList.add("pw-watchlist-error");
             window.setTimeout(() => button?.classList.remove("pw-watchlist-error"), 900);
         } finally {
@@ -280,13 +292,14 @@
         const sourceKey = normalizeId(itemId);
         const canonicalKey = state.aliases.get(sourceKey) || sourceKey;
         const active = state.ids.has(canonicalKey);
+        const changed = button.getAttribute("aria-pressed") !== String(active);
         button.dataset.pwCanonicalId = canonicalKey;
         button.classList.toggle("pw-watchlist-active", active);
         button.setAttribute("aria-pressed", String(active));
         button.setAttribute("aria-label", active ? "Remove from Watchlist" : "Add to Watchlist");
         button.setAttribute("title", active ? "Remove from Watchlist" : "Add to Watchlist");
         const icon = button.querySelector(".pw-watchlist-icon");
-        if (icon) icon.innerHTML = eyeSvg(active);
+        if (icon && (changed || !icon.firstElementChild)) icon.innerHTML = eyeSvg(active);
         const label = button.querySelector(".pw-watchlist-label");
         if (label) label.textContent = active ? "In Watchlist" : "Watchlist";
     }
@@ -300,6 +313,15 @@
     function syncAllButtons() {
         document.querySelectorAll(".pw-watchlist-button[data-pw-item-id]").forEach(button => {
             if (button.dataset.pwItemId) updateButton(button, button.dataset.pwItemId);
+        });
+    }
+
+    function syncCanonicalButtons(canonicalId) {
+        const target = normalizeId(canonicalId);
+        document.querySelectorAll(".pw-watchlist-button[data-pw-item-id]").forEach(button => {
+            const sourceKey = normalizeId(button.dataset.pwItemId);
+            const buttonKey = normalizeId(button.dataset.pwCanonicalId) || state.aliases.get(sourceKey) || sourceKey;
+            if (buttonKey === target) updateButton(button, button.dataset.pwItemId);
         });
     }
 
@@ -380,6 +402,7 @@
         }
         existing?.remove();
         const button = makeButton(itemId, true);
+        button.dataset.pwItemType = item?.Type || item?.type || "";
         const more = host.querySelector(".btnMoreCommands, [data-action='more'], button[title*='more' i], button[title*='mehr' i]") || host.lastElementChild;
         if (more) host.insertBefore(button, more); else host.appendChild(button);
     }
@@ -388,8 +411,10 @@
         if (!(card instanceof HTMLElement) || isLibraryFolderCard(card)) return;
         const itemId = cardId(card);
         if (!itemId) return;
-        if (!card.querySelector(":scope .pw-watchlist-card-button")) placeCardButton(card, itemId);
         const itemType = card.dataset.type || card.dataset.itemType || card.getAttribute("data-type") || "";
+        if (!card.querySelector(":scope .pw-watchlist-card-button")) placeCardButton(card, itemId);
+        const button = card.querySelector(":scope .pw-watchlist-card-button");
+        if (button) button.dataset.pwItemType = itemType;
         if (/^(Episode|Season)$/i.test(itemType)) queueCardAliasResolution(itemId);
     }
 

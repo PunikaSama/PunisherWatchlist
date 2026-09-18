@@ -6,7 +6,7 @@ const script = fs.readFileSync(path.join(root, 'src', 'PunisherWatchlist', 'Web'
 const style = fs.readFileSync(path.join(root, 'src', 'PunisherWatchlist', 'Web', 'punisher-watchlist.css'), 'utf8');
 const controller = fs.readFileSync(path.join(root, 'src', 'PunisherWatchlist', 'Api', 'WatchlistController.cs'), 'utf8');
 
-for (const token of ['PunisherWatchlist/items', 'pw-watchlist-tab', 'pw-watchlist-card-button', 'pw-watchlist-detail-button', 'MuiAppBar-root', 'favoriteButton', 'pw-watchlist-card-button-adjacent', 'pw-watchlist-drawer-link', 'document.querySelectorAll(".card")', 'localStorageKey', 'pw-watchlist-route-active', 'isLibraryFolderCard', 'state.aliases', 'canonicalKey', 'canonicalClientId', 'button?.dataset?.pwCanonicalId', 'button.dataset.pwCanonicalId = canonicalKey', 'syncAllButtons();', '"Season"', 'const seriesId = parentSeriesId(item)', 'state.aliases.set(normalizeId(itemId), seriesId)', 'installNativeItemsProvider', 'api.getItems =', 'function watchlistHash()', 'function isStandaloneWatchlistRoute()', 'type: "tag"', 'IncludeItemTypes: "Movie,Series"', 'container.refreshItems()', 'providerActive: false', 'state.providerActive = true', 'shouldUseWatchlistProvider(state.watchlistOpen, state.providerActive)', 'orderWatchlistResult(result, ids, startIndex, limit)', 'queueCardAliasResolution(itemId)', 'await loadItems(ids)', 'ids.forEach(applyCardAlias)', 'if (!favorite)', 'tab.remove()', 'favorite.insertAdjacentElement("afterend", tab)', 'other.classList.remove("emby-tab-button-active", "Mui-selected", "navMenuOption-selected", "selected", "buttonActive", "pw-watchlist-nav-active")']) {
+for (const token of ['PunisherWatchlist/items', 'pw-watchlist-tab', 'pw-watchlist-card-button', 'pw-watchlist-detail-button', 'MuiAppBar-root', 'favoriteButton', 'pw-watchlist-card-button-adjacent', 'pw-watchlist-drawer-link', 'document.querySelectorAll(".card")', 'localStorageKey', 'pw-watchlist-route-active', 'isLibraryFolderCard', 'state.aliases', 'canonicalKey', 'canonicalClientId', 'immediateToggleKey(itemId, button)', 'button.dataset.pwCanonicalId = canonicalKey', 'button.dataset.pwItemType = itemType', 'syncCanonicalButtons(effectiveKey)', 'if (desired) state.ids.delete(effectiveKey); else addNewest(effectiveKey);', '"Season"', 'const seriesId = parentSeriesId(item)', 'state.aliases.set(normalizeId(itemId), seriesId)', 'installNativeItemsProvider', 'api.getItems =', 'function watchlistHash()', 'function isStandaloneWatchlistRoute()', 'type: "tag"', 'IncludeItemTypes: "Movie,Series"', 'container.refreshItems()', 'providerActive: false', 'state.providerActive = true', 'shouldUseWatchlistProvider(state.watchlistOpen, state.providerActive)', 'orderWatchlistResult(result, ids, startIndex, limit)', 'queueCardAliasResolution(itemId)', 'await loadItems(ids)', 'ids.forEach(applyCardAlias)', 'if (!favorite)', 'tab.remove()', 'favorite.insertAdjacentElement("afterend", tab)', 'other.classList.remove("emby-tab-button-active", "Mui-selected", "navMenuOption-selected", "selected", "buttonActive", "pw-watchlist-nav-active")']) {
     if (!script.includes(token)) throw new Error(`Missing client feature: ${token}`);
 }
 for (const token of ['.pw-watchlist-button', '.pw-watchlist-card-button-adjacent:is(', '.card:hover .pw-watchlist-card-button', '@media (hover: none)', '.pw-watchlist-detail-button.pw-watchlist-active', '.pw-watchlist-route-active .itemsViewSettingsContainer']) {
@@ -63,6 +63,7 @@ const normalizeMatch = script.match(/function normalizeId\(value\) \{\s*([\s\S]*
 if (!normalizeMatch) throw new Error('Missing normalizeId implementation.');
 const normalizeId = new Function('value', normalizeMatch[1]);
 const parentSeriesId = extractFunction('parentSeriesId', { normalizeId });
+const immediateToggleKey = extractFunction('immediateToggleKey', { normalizeId });
 const dashedId = '0c23cde7-5a7e-6826-4c8a-375365a6ab17';
 const compactId = '0c23cde75a7e68264c8a375365a6ab17';
 if (normalizeId(dashedId) !== compactId || normalizeId(compactId) !== compactId) {
@@ -70,6 +71,14 @@ if (normalizeId(dashedId) !== compactId || normalizeId(compactId) !== compactId)
 }
 if (parentSeriesId({ Type: 'Episode', SeriesId: dashedId }) !== compactId || parentSeriesId({ Type: 'Series', SeriesId: dashedId }) !== '') {
     throw new Error('Episode cards no longer resolve to their Watchlist series ID.');
+}
+if (immediateToggleKey(compactId, { dataset: { pwCanonicalId: compactId, pwItemType: 'Series' } }) !== compactId
+    || immediateToggleKey('episode', { dataset: { pwCanonicalId: compactId, pwItemType: 'Episode' } }) !== compactId
+    || immediateToggleKey('episode', { dataset: { pwCanonicalId: 'episode', pwItemType: 'Episode' } }) !== '') {
+    throw new Error('Known Watchlist targets must toggle immediately without metadata loading.');
+}
+if (/\.pw-watchlist-button\[data-busy="true"\][^{]*\{[^}]*opacity/s.test(style)) {
+    throw new Error('Busy Watchlist buttons must not visibly fade during an optimistic toggle.');
 }
 const regressionIds = new Set([normalizeId(dashedId)]);
 const regressionItems = new Map([[normalizeId(compactId), { Id: compactId }]]);

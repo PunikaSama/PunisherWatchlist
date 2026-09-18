@@ -56,7 +56,6 @@
 }
 
 .pw-watchlist-button[data-busy="true"] {
-    opacity: .55;
     pointer-events: none;
 }
 
