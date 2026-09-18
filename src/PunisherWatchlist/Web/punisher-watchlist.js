@@ -1,8 +1,8 @@
 (function () {
     "use strict";
 
-    if (window.__punisherWatchlistV116) return;
-    window.__punisherWatchlistV116 = true;
+    if (window.__punisherWatchlistV117) return;
+    window.__punisherWatchlistV117 = true;
 
     const isWatchlistRoute = () => location.search.includes("pw-watchlist=1") || location.hash.includes("pw-watchlist=1");
     if (isWatchlistRoute()) document.documentElement.classList.add("pw-watchlist-route-active");
@@ -550,8 +550,6 @@
             const targetHash = watchlistHash();
             if (location.hash !== targetHash) location.hash = targetHash.slice(1);
             else refreshWatchlistView();
-            window.setTimeout(() => refreshWatchlistView(), 250);
-            window.setTimeout(() => refreshWatchlistView(), 700);
             syncWatchlistNavigation();
         } else {
             syncWatchlistNavigation();
