@@ -9,11 +9,18 @@ const controller = fs.readFileSync(path.join(root, 'src', 'PunisherWatchlist', '
 for (const token of ['PunisherWatchlist/items', 'pw-watchlist-tab', 'pw-watchlist-card-button', 'pw-watchlist-detail-button', 'MuiAppBar-root', 'favoriteButton', 'pw-watchlist-card-button-adjacent', 'pw-watchlist-drawer-link', 'document.querySelectorAll(".card")', 'localStorageKey', 'pw-watchlist-route-active', 'isLibraryFolderCard', 'state.aliases', 'canonicalKey', 'canonicalClientId', 'immediateToggleKey(itemId, button)', 'button.dataset.pwCanonicalId = canonicalKey', 'button.dataset.pwItemType = itemType', 'syncCanonicalButtons(effectiveKey)', 'if (desired) state.ids.delete(effectiveKey); else addNewest(effectiveKey);', '"Season"', 'const seriesId = parentSeriesId(item)', 'state.aliases.set(normalizeId(itemId), seriesId)', 'installNativeItemsProvider', 'api.getItems =', 'function watchlistHash()', 'function isStandaloneWatchlistRoute()', 'type: "tag"', 'IncludeItemTypes: "Movie,Series"', 'container.refreshItems()', 'providerActive: false', 'state.providerActive = true', 'shouldUseWatchlistProvider(state.watchlistOpen, state.providerActive)', 'orderWatchlistResult(result, ids, startIndex, limit)', 'queueCardAliasResolution(itemId)', 'await loadItems(ids)', 'ids.forEach(applyCardAlias)', 'if (!favorite)', 'tab.remove()', 'favorite.insertAdjacentElement("afterend", tab)', 'other.classList.remove("emby-tab-button-active", "Mui-selected", "navMenuOption-selected", "selected", "buttonActive", "pw-watchlist-nav-active")']) {
     if (!script.includes(token)) throw new Error(`Missing client feature: ${token}`);
 }
-for (const token of ['.pw-watchlist-button', '.pw-watchlist-card-button-adjacent:is(', '.card:hover .pw-watchlist-card-button', '@media (hover: none)', '.pw-watchlist-detail-button.pw-watchlist-active', '.pw-watchlist-route-active .itemsViewSettingsContainer']) {
+for (const token of ['.pw-watchlist-button', '.pw-watchlist-card-button-adjacent.pw-watchlist-active', '.card:hover .pw-watchlist-card-button', '@media (hover: none)', '.pw-watchlist-detail-button.pw-watchlist-active', '.pw-watchlist-route-active .itemsViewSettingsContainer']) {
     if (!style.includes(token)) throw new Error(`Missing stylesheet rule: ${token}`);
 }
 for (const obsolete of ['function renderWatchlist', 'function watchlistCard', 'function ensureWatchlistCardFooter', 'function normalizeStoredIds', 'function placeAfterFavorites', 'pw-watchlist-native-footer', 'pw-watchlist-grid', 'pw-watchlist-item', 'pw-watchlist-card-actions', 'favorite.click()', '#favoritesTab .itemsContainer', 'window.setTimeout(() => refreshWatchlistView(), 250)', 'window.setTimeout(() => refreshWatchlistView(), 700)']) {
     if (script.includes(obsolete) || style.includes(obsolete)) throw new Error(`Custom Watchlist renderer must stay removed: ${obsolete}`);
+}
+if (style.includes('.pw-watchlist-card-button-adjacent:is(:hover')) {
+    throw new Error('Inactive card eyes must not keep the active accent color while hovered.');
+}
+const toggleSource = script.slice(script.indexOf('async function toggle('), script.indexOf('function updateButton('));
+if (toggleSource.indexOf('if (state.watchlistOpen) refreshWatchlistView();') > toggleSource.indexOf('const result = await apiJson(')) {
+    throw new Error('The native Watchlist view must refresh before persistence completes.');
 }
 
 const synchronizeSource = script.slice(script.indexOf('async function synchronize()'), script.indexOf('function schedule()'));

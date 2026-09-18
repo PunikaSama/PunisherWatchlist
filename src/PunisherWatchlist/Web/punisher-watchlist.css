@@ -105,7 +105,7 @@
     position: relative !important;
 }
 
-.pw-watchlist-card-button-adjacent:is(:hover, :focus-visible, .pw-watchlist-active) {
+.pw-watchlist-card-button-adjacent.pw-watchlist-active {
     background: transparent !important;
     color: var(--pft-accent, #00a4dc) !important;
 }

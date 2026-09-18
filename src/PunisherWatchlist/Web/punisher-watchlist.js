@@ -1,8 +1,8 @@
 (function () {
     "use strict";
 
-    if (window.__punisherWatchlistV121) return;
-    window.__punisherWatchlistV121 = true;
+    if (window.__punisherWatchlistV122) return;
+    window.__punisherWatchlistV122 = true;
 
     const isWatchlistRoute = () => location.search.includes("pw-watchlist=1") || location.hash.includes("pw-watchlist=1");
     if (isWatchlistRoute()) document.documentElement.classList.add("pw-watchlist-route-active");
@@ -263,6 +263,7 @@
         if (desired) addNewest(effectiveKey); else state.ids.delete(effectiveKey);
         writeLocalIds();
         syncCanonicalButtons(effectiveKey);
+        if (state.watchlistOpen) refreshWatchlistView();
         try {
             const result = await apiJson(`/PunisherWatchlist/items/${encodeURIComponent(effectiveKey)}`, desired ? "PUT" : "DELETE");
             const active = result?.InWatchlist ?? result?.inWatchlist ?? desired;
@@ -275,12 +276,12 @@
             syncButtons(itemId);
             syncCanonicalButtons(canonicalKey);
             document.dispatchEvent(new CustomEvent("punisherwatchlistchange", { detail: { itemId, active } }));
-            if (state.watchlistOpen) refreshWatchlistView();
         } catch (error) {
             console.error("PunisherWatchlist could not update the item.", error);
             if (desired) state.ids.delete(effectiveKey); else addNewest(effectiveKey);
             writeLocalIds();
             syncCanonicalButtons(effectiveKey);
+            if (state.watchlistOpen) refreshWatchlistView();
             button?.classList.add("pw-watchlist-error");
             window.setTimeout(() => button?.classList.remove("pw-watchlist-error"), 900);
         } finally {
