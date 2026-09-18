@@ -1,8 +1,8 @@
 (function () {
     "use strict";
 
-    if (window.__punisherWatchlistV122) return;
-    window.__punisherWatchlistV122 = true;
+    if (window.__punisherWatchlistV123) return;
+    window.__punisherWatchlistV123 = true;
 
     const isWatchlistRoute = () => location.search.includes("pw-watchlist=1") || location.hash.includes("pw-watchlist=1");
     if (isWatchlistRoute()) document.documentElement.classList.add("pw-watchlist-route-active");
@@ -25,7 +25,9 @@
         watchlistRequested: isWatchlistRoute(),
         patchedApi: null,
         originalGetItems: null,
-        providerActive: false
+        providerActive: false,
+        watchlistContainer: null,
+        refreshOnWatchlistViewShow: false
     };
 
     const eyeSvg = active => `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5c-5.4 0-9.3 4.2-10.5 6.3a1.4 1.4 0 0 0 0 1.4C2.7 14.8 6.6 19 12 19s9.3-4.2 10.5-6.3a1.4 1.4 0 0 0 0-1.4C21.3 9.2 17.4 5 12 5Zm0 11.3A4.3 4.3 0 1 1 12 7.7a4.3 4.3 0 0 1 0 8.6Zm0-2.2a2.1 2.1 0 1 0 0-4.2 2.1 2.1 0 0 0 0 4.2Z"${active ? " fill=\"currentColor\"" : ""}/></svg>`;
@@ -600,9 +602,22 @@
             if (state.watchlistOpen && attempt < 20) window.setTimeout(() => refreshWatchlistView(attempt + 1), 50);
             return;
         }
+        if (state.watchlistOpen && isStandaloneWatchlistRoute()) state.watchlistContainer = containers[0];
         for (const container of containers) {
             if (typeof container.refreshItems === "function") void container.refreshItems();
             else if (typeof container.resume === "function") void container.resume({ refresh: true });
+        }
+    }
+
+    async function refreshCachedWatchlistView() {
+        const container = state.watchlistContainer;
+        if (!(container instanceof HTMLElement) || !container.isConnected || typeof container.refreshItems !== "function") return false;
+        try {
+            await container.refreshItems();
+            return true;
+        } catch (error) {
+            console.warn("PunisherWatchlist could not refresh the cached native view before navigation.", error);
+            return false;
         }
     }
 
@@ -621,8 +636,14 @@
             state.providerActive = true;
             installNativeItemsProvider();
             const targetHash = watchlistHash();
-            if (location.hash !== targetHash) location.hash = targetHash.slice(1);
-            else refreshWatchlistView();
+            if (location.hash !== targetHash) {
+                const hadCachedView = state.watchlistContainer instanceof HTMLElement && state.watchlistContainer.isConnected;
+                const refreshed = hadCachedView ? await refreshCachedWatchlistView() : false;
+                state.refreshOnWatchlistViewShow = hadCachedView && !refreshed;
+                location.hash = targetHash.slice(1);
+            } else {
+                refreshWatchlistView();
+            }
             syncWatchlistNavigation();
         } else {
             syncWatchlistNavigation();
@@ -630,7 +651,13 @@
     }
 
     function closeWatchlist(clearUrl = true) {
+        if (state.watchlistOpen && isStandaloneWatchlistRoute()) {
+            const visibleContainer = [...document.querySelectorAll(".mainAnimatedPage:not(.hide) .itemsContainer, .page:not(.hide) .itemsContainer")]
+                .find(container => visible(container));
+            if (visibleContainer) state.watchlistContainer = visibleContainer;
+        }
         state.watchlistRequested = false;
+        state.refreshOnWatchlistViewShow = false;
         document.documentElement.classList.remove("pw-watchlist-route-active");
         if (clearUrl) removeWatchlistUrlMarker();
         if (!state.watchlistOpen) return;
@@ -682,7 +709,12 @@
             if (isNavigation && !tab.classList.contains("pw-watchlist-tab")) closeWatchlist();
         }, true);
         document.addEventListener("viewshow", () => {
-            if (!isWatchlistRoute()) closeWatchlist(false);
+            if (!isWatchlistRoute()) {
+                closeWatchlist(false);
+            } else if (state.refreshOnWatchlistViewShow) {
+                state.refreshOnWatchlistViewShow = false;
+                window.requestAnimationFrame(() => refreshWatchlistView());
+            }
             schedule();
         });
         window.addEventListener("hashchange", () => {
