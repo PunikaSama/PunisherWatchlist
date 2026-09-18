@@ -1,8 +1,8 @@
 (function () {
     "use strict";
 
-    if (window.__punisherWatchlistV123) return;
-    window.__punisherWatchlistV123 = true;
+    if (window.__punisherWatchlistV124) return;
+    window.__punisherWatchlistV124 = true;
 
     const isWatchlistRoute = () => location.search.includes("pw-watchlist=1") || location.hash.includes("pw-watchlist=1");
     if (isWatchlistRoute()) document.documentElement.classList.add("pw-watchlist-route-active");
@@ -596,17 +596,30 @@
         });
     }
 
+    function nativeListContainer(page) {
+        if (!(page instanceof HTMLElement) || !page.querySelector(".itemsViewSettingsContainer")) return null;
+        return page.querySelector(".itemsContainer");
+    }
+
+    function activeNativeListContainer() {
+        for (const page of document.querySelectorAll(".mainAnimatedPage:not(.hide), .page:not(.hide)")) {
+            if (!visible(page)) continue;
+            const container = nativeListContainer(page);
+            if (container) return container;
+        }
+        return null;
+    }
+
     function refreshWatchlistView(attempt = 0) {
-        const containers = [...document.querySelectorAll(".mainAnimatedPage:not(.hide) .itemsContainer, .page:not(.hide) .itemsContainer")];
-        if (!containers.length) {
+        if (!state.watchlistOpen || !isStandaloneWatchlistRoute()) return;
+        const container = activeNativeListContainer();
+        if (!container) {
             if (state.watchlistOpen && attempt < 20) window.setTimeout(() => refreshWatchlistView(attempt + 1), 50);
             return;
         }
-        if (state.watchlistOpen && isStandaloneWatchlistRoute()) state.watchlistContainer = containers[0];
-        for (const container of containers) {
-            if (typeof container.refreshItems === "function") void container.refreshItems();
-            else if (typeof container.resume === "function") void container.resume({ refresh: true });
-        }
+        state.watchlistContainer = container;
+        if (typeof container.refreshItems === "function") void container.refreshItems();
+        else if (typeof container.resume === "function") void container.resume({ refresh: true });
     }
 
     async function refreshCachedWatchlistView() {
@@ -652,8 +665,7 @@
 
     function closeWatchlist(clearUrl = true) {
         if (state.watchlistOpen && isStandaloneWatchlistRoute()) {
-            const visibleContainer = [...document.querySelectorAll(".mainAnimatedPage:not(.hide) .itemsContainer, .page:not(.hide) .itemsContainer")]
-                .find(container => visible(container));
+            const visibleContainer = activeNativeListContainer();
             if (visibleContainer) state.watchlistContainer = visibleContainer;
         }
         state.watchlistRequested = false;
@@ -708,12 +720,19 @@
             const isNavigation = tab && navigationHosts().some(host => host.contains(tab));
             if (isNavigation && !tab.classList.contains("pw-watchlist-tab")) closeWatchlist();
         }, true);
-        document.addEventListener("viewshow", () => {
+        document.addEventListener("viewshow", event => {
             if (!isWatchlistRoute()) {
                 closeWatchlist(false);
-            } else if (state.refreshOnWatchlistViewShow) {
-                state.refreshOnWatchlistViewShow = false;
-                window.requestAnimationFrame(() => refreshWatchlistView());
+            } else {
+                const shownPage = event.target instanceof HTMLElement
+                    ? event.target.closest("[data-role='page'], .page") || event.target
+                    : null;
+                const shownContainer = nativeListContainer(shownPage);
+                if (shownContainer) state.watchlistContainer = shownContainer;
+                if (state.refreshOnWatchlistViewShow) {
+                    state.refreshOnWatchlistViewShow = false;
+                    window.requestAnimationFrame(() => refreshWatchlistView());
+                }
             }
             schedule();
         });
