@@ -6,12 +6,6 @@
     display: none !important;
 }
 
-.pw-watchlist-native-footer .cardText-first {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
 .pw-watchlist-nav-link {
     align-items: center;
     color: inherit;

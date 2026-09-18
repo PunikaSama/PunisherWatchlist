@@ -1,8 +1,8 @@
 (function () {
     "use strict";
 
-    if (window.__punisherWatchlistV115) return;
-    window.__punisherWatchlistV115 = true;
+    if (window.__punisherWatchlistV116) return;
+    window.__punisherWatchlistV116 = true;
 
     const isWatchlistRoute = () => location.search.includes("pw-watchlist=1") || location.hash.includes("pw-watchlist=1");
     if (isWatchlistRoute()) document.documentElement.classList.add("pw-watchlist-route-active");
@@ -48,7 +48,7 @@
     }
 
     function nativeWatchlistOptions(options, ids) {
-        const result = { ...options, Ids: ids.join(","), StartIndex: 0, Limit: ids.length };
+        const result = { ...options, Ids: ids.join(","), IncludeItemTypes: "Movie,Series", StartIndex: 0, Limit: ids.length };
         delete result.Filters;
         delete result.filters;
         delete result.IsFavorite;
@@ -57,6 +57,8 @@
         delete result.sortBy;
         delete result.SortOrder;
         delete result.sortOrder;
+        delete result.Tags;
+        delete result.tags;
         return result;
     }
 
@@ -216,30 +218,10 @@
         return sourceKey;
     }
 
-    async function normalizeStoredIds() {
-        const ids = [...state.ids];
-        try {
-            await loadItems(ids);
-        } catch {
-            return;
-        }
-
-        let changed = false;
-        for (const id of ids) {
-            const seriesId = parentSeriesId(state.itemCache.get(id));
-            if (!seriesId || seriesId === id) continue;
-            state.aliases.set(id, seriesId);
-            state.ids.delete(id);
-            state.ids.add(seriesId);
-            changed = true;
-        }
-        if (changed) writeLocalIds();
-    }
-
     function watchlistHash() {
         const params = new URLSearchParams({
             serverId: state.api?.serverId?.() || "",
-            type: "Movie,Series",
+            type: "tag",
             "pw-watchlist": "1"
         });
         return `#/list?${params}`;
@@ -400,39 +382,6 @@
         const itemId = cardId(card);
         if (!itemId) return;
         if (!card.querySelector(":scope .pw-watchlist-card-button")) placeCardButton(card, itemId);
-        ensureWatchlistCardFooter(card, itemId);
-    }
-
-    function ensureWatchlistCardFooter(card, itemId) {
-        if (!state.providerActive || !isStandaloneWatchlistRoute()) return;
-        const item = state.itemCache.get(normalizeId(itemId));
-        const name = item?.Name || item?.name;
-        if (!name) return;
-        const box = card.querySelector(".cardScalable")?.parentElement || card.querySelector(".cardBox") || card;
-        let footer = box.querySelector(":scope > .cardFooter");
-        if (!footer) {
-            footer = document.createElement("div");
-            footer.className = "cardFooter pw-watchlist-native-footer";
-            box.appendChild(footer);
-        } else {
-            footer.classList.add("pw-watchlist-native-footer");
-        }
-        box.classList.add("cardBox-bottompadded");
-        let title = footer.querySelector(".cardText-first");
-        if (!title) {
-            title = document.createElement("div");
-            title.className = "cardText cardText-first";
-            footer.prepend(title);
-        }
-        title.textContent = name;
-        const yearValue = item?.ProductionYear || item?.productionYear;
-        let year = footer.querySelector(".pw-watchlist-card-year");
-        if (yearValue && !year) {
-            year = document.createElement("div");
-            year.className = "cardText cardText-secondary pw-watchlist-card-year";
-            footer.appendChild(year);
-        }
-        if (year) year.textContent = yearValue ? String(yearValue) : "";
     }
 
     function ensureCardButtons() {
@@ -596,7 +545,6 @@
         if (firstOpen) {
             const loaded = await loadState(true);
             if (!loaded) return;
-            await normalizeStoredIds();
             state.providerActive = true;
             installNativeItemsProvider();
             const targetHash = watchlistHash();
@@ -617,7 +565,6 @@
         if (!state.watchlistOpen) return;
         state.watchlistOpen = false;
         state.providerActive = false;
-        document.querySelectorAll(".pw-watchlist-native-footer").forEach(footer => footer.remove());
         document.querySelectorAll(".pw-watchlist-tab").forEach(tab => {
             tab.classList.remove("emby-tab-button-active");
             tab.classList.remove("pw-watchlist-nav-active");
