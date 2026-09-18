@@ -1,8 +1,8 @@
 (function () {
     "use strict";
 
-    if (window.__punisherWatchlistV124) return;
-    window.__punisherWatchlistV124 = true;
+    if (window.__punisherWatchlistV125) return;
+    window.__punisherWatchlistV125 = true;
 
     const isWatchlistRoute = () => location.search.includes("pw-watchlist=1") || location.hash.includes("pw-watchlist=1");
     if (isWatchlistRoute()) document.documentElement.classList.add("pw-watchlist-route-active");
@@ -361,8 +361,9 @@
         return marker?.matches?.("button") ? marker : marker?.closest?.("button");
     }
 
-    function placeCardButton(card, itemId) {
-        const button = makeButton(itemId);
+    function placeCardButton(card, itemId, existingButton = null) {
+        const button = existingButton || makeButton(itemId);
+        button.classList.remove("pw-watchlist-card-button-adjacent", "pw-watchlist-card-button-fallback");
         const favorite = favoriteButton(card);
         if (favorite?.parentElement) {
             favorite.classList.forEach(className => {
@@ -415,8 +416,14 @@
         const itemId = cardId(card);
         if (!itemId) return;
         const itemType = card.dataset.type || card.dataset.itemType || card.getAttribute("data-type") || "";
-        if (!card.querySelector(":scope .pw-watchlist-card-button")) placeCardButton(card, itemId);
-        const button = card.querySelector(":scope .pw-watchlist-card-button");
+        let button = card.querySelector(":scope .pw-watchlist-card-button");
+        if (!button) {
+            placeCardButton(card, itemId);
+            button = card.querySelector(":scope .pw-watchlist-card-button");
+        } else if (button.classList.contains("pw-watchlist-card-button-fallback")
+            && (favoriteButton(card)?.parentElement || card.querySelector(".cardOverlayButton-br, .cardOverlayButtons, .cardOverlayButtonContainer"))) {
+            placeCardButton(card, itemId, button);
+        }
         if (button) button.dataset.pwItemType = itemType;
         if (/^(Episode|Season)$/i.test(itemType)) queueCardAliasResolution(itemId);
     }
