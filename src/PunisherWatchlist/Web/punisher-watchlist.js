@@ -1,8 +1,8 @@
 (function () {
     "use strict";
 
-    if (window.__punisherWatchlistV118) return;
-    window.__punisherWatchlistV118 = true;
+    if (window.__punisherWatchlistV119) return;
+    window.__punisherWatchlistV119 = true;
 
     const isWatchlistRoute = () => location.search.includes("pw-watchlist=1") || location.hash.includes("pw-watchlist=1");
     if (isWatchlistRoute()) document.documentElement.classList.add("pw-watchlist-route-active");
@@ -16,6 +16,9 @@
         loading: null,
         itemCache: new Map(),
         aliases: new Map(),
+        cardAliasQueue: new Set(),
+        cardAliasTimer: 0,
+        cardAliasLoading: false,
         observer: null,
         scheduleTimer: 0,
         watchlistOpen: false,
@@ -120,6 +123,7 @@
             state.ids.clear();
             state.itemCache.clear();
             state.aliases.clear();
+            state.cardAliasQueue.clear();
         }
         if (state.loaded && !force) return true;
         if (!state.loading) {
@@ -382,6 +386,46 @@
         const itemId = cardId(card);
         if (!itemId) return;
         if (!card.querySelector(":scope .pw-watchlist-card-button")) placeCardButton(card, itemId);
+        const itemType = card.dataset.type || card.dataset.itemType || card.getAttribute("data-type") || "";
+        if (/^(Episode|Season)$/i.test(itemType)) queueCardAliasResolution(itemId);
+    }
+
+    function applyCardAlias(itemId) {
+        const sourceKey = normalizeId(itemId);
+        const seriesId = parentSeriesId(state.itemCache.get(sourceKey));
+        if (seriesId) state.aliases.set(sourceKey, seriesId);
+        syncButtons(itemId);
+    }
+
+    function queueCardAliasResolution(itemId) {
+        const sourceKey = normalizeId(itemId);
+        if (!sourceKey) return;
+        if (state.itemCache.has(sourceKey)) {
+            applyCardAlias(sourceKey);
+            return;
+        }
+        state.cardAliasQueue.add(sourceKey);
+        if (state.cardAliasTimer || state.cardAliasLoading) return;
+        state.cardAliasTimer = window.setTimeout(flushCardAliasQueue, 20);
+    }
+
+    async function flushCardAliasQueue() {
+        state.cardAliasTimer = 0;
+        if (state.cardAliasLoading || !state.cardAliasQueue.size) return;
+        const ids = [...state.cardAliasQueue];
+        state.cardAliasQueue.clear();
+        state.cardAliasLoading = true;
+        try {
+            await loadItems(ids);
+            ids.forEach(applyCardAlias);
+        } catch (error) {
+            console.warn("PunisherWatchlist could not resolve episode cards to their series.", error);
+        } finally {
+            state.cardAliasLoading = false;
+            if (state.cardAliasQueue.size && !state.cardAliasTimer) {
+                state.cardAliasTimer = window.setTimeout(flushCardAliasQueue, 20);
+            }
+        }
     }
 
     function ensureCardButtons() {
