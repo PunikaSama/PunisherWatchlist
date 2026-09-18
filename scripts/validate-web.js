@@ -16,6 +16,20 @@ for (const obsolete of ['function renderWatchlist', 'function watchlistCard', 'f
     if (script.includes(obsolete) || style.includes(obsolete)) throw new Error(`Custom Watchlist renderer must stay removed: ${obsolete}`);
 }
 
+const synchronizeSource = script.slice(script.indexOf('async function synchronize()'), script.indexOf('function schedule()'));
+if (synchronizeSource.indexOf('ensureWatchlistTab();') > synchronizeSource.indexOf('state.api = apiClient();')) {
+    throw new Error('Watchlist navigation must render before API initialization.');
+}
+if (script.includes('window.clearTimeout(state.scheduleTimer)') || !script.includes('if (state.scheduleTimer) return;') || !script.includes('}, 16);')) {
+    throw new Error('Navigation synchronization must use the non-starving frame throttle.');
+}
+if (script.includes('!document.body || !apiClient()')) {
+    throw new Error('Initial Watchlist navigation must not wait for the Jellyfin API client.');
+}
+if (!script.slice(script.indexOf('function start()')).includes('void synchronize();')) {
+    throw new Error('Initial Watchlist navigation must synchronize immediately.');
+}
+
 function extractFunction(name) {
     const start = script.indexOf(`function ${name}(`);
     if (start < 0) throw new Error(`Missing ${name} implementation.`);

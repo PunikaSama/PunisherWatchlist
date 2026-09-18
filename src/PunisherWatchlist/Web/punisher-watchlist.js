@@ -1,8 +1,8 @@
 (function () {
     "use strict";
 
-    if (window.__punisherWatchlistV117) return;
-    window.__punisherWatchlistV117 = true;
+    if (window.__punisherWatchlistV118) return;
+    window.__punisherWatchlistV118 = true;
 
     const isWatchlistRoute = () => location.search.includes("pw-watchlist=1") || location.hash.includes("pw-watchlist=1");
     if (isWatchlistRoute()) document.documentElement.classList.add("pw-watchlist-route-active");
@@ -544,7 +544,11 @@
         document.documentElement.classList.add("pw-watchlist-route-active");
         if (firstOpen) {
             const loaded = await loadState(true);
-            if (!loaded) return;
+            if (!loaded) {
+                state.watchlistOpen = false;
+                window.setTimeout(schedule, 50);
+                return;
+            }
             state.providerActive = true;
             installNativeItemsProvider();
             const targetHash = watchlistHash();
@@ -571,9 +575,12 @@
     }
 
     async function synchronize() {
-        state.api = apiClient();
-        if (!state.api || !state.api.getCurrentUserId?.()) return;
         ensureWatchlistTab();
+        state.api = apiClient();
+        if (!state.api || !state.api.getCurrentUserId?.()) {
+            window.setTimeout(schedule, 50);
+            return;
+        }
         ensureCardButtons();
         const wantsWatchlist = state.watchlistRequested || isWatchlistRoute();
         if (wantsWatchlist) {
@@ -586,13 +593,16 @@
     }
 
     function schedule() {
-        window.clearTimeout(state.scheduleTimer);
-        state.scheduleTimer = window.setTimeout(() => { void synchronize(); }, 80);
+        if (state.scheduleTimer) return;
+        state.scheduleTimer = window.setTimeout(() => {
+            state.scheduleTimer = 0;
+            void synchronize();
+        }, 16);
     }
 
     function start() {
-        if (!document.body || !apiClient()) {
-            window.setTimeout(start, 150);
+        if (!document.body) {
+            window.setTimeout(start, 25);
             return;
         }
         state.observer = new MutationObserver(schedule);
@@ -616,7 +626,7 @@
             if (!state.watchlistRequested) closeWatchlist(false);
             schedule();
         });
-        schedule();
+        void synchronize();
     }
 
     start();
