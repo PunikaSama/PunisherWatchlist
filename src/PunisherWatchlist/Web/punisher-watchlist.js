@@ -26,6 +26,7 @@
         patchedApi: null,
         originalGetItems: null,
         providerActive: false,
+        providerOpening: false,
         watchlistContainer: null,
         refreshOnWatchlistViewShow: false
     };
@@ -90,8 +91,8 @@
         state.ids = new Set([normalized, ...[...state.ids].filter(id => id !== normalized)]);
     }
 
-    function shouldUseWatchlistProvider(watchlistOpen, providerActive) {
-        return Boolean(watchlistOpen && providerActive);
+    function shouldUseWatchlistProvider(watchlistOpen, providerActive, routeActive, providerOpening) {
+        return Boolean(watchlistOpen && providerActive && (routeActive || providerOpening));
     }
 
     function localStorageKey() {
@@ -580,7 +581,15 @@
         state.patchedApi = api;
         state.originalGetItems = original;
         api.getItems = (userId, options = {}) => {
-            if (!shouldUseWatchlistProvider(state.watchlistOpen, state.providerActive)) return original(userId, options);
+            // Navigation can start a normal library query before viewshow/hashchange
+            // has cleared our in-memory flags. The URL marker changes synchronously,
+            // so it is the authoritative boundary that prevents leaking the
+            // Watchlist provider into a library with hundreds of items.
+            if (!shouldUseWatchlistProvider(
+                state.watchlistOpen,
+                state.providerActive,
+                isStandaloneWatchlistRoute(),
+                state.providerOpening)) return original(userId, options);
             const ids = [...state.ids];
             if (!ids.length) return Promise.resolve({ Items: [], TotalRecordCount: 0, StartIndex: 0 });
             const startIndex = options.StartIndex ?? options.startIndex ?? 0;
@@ -658,9 +667,11 @@
             const targetHash = watchlistHash();
             if (location.hash !== targetHash) {
                 const hadCachedView = state.watchlistContainer instanceof HTMLElement && state.watchlistContainer.isConnected;
+                state.providerOpening = true;
                 const refreshed = hadCachedView ? await refreshCachedWatchlistView() : false;
                 state.refreshOnWatchlistViewShow = hadCachedView && !refreshed;
                 location.hash = targetHash.slice(1);
+                state.providerOpening = false;
             } else {
                 refreshWatchlistView();
             }
@@ -676,6 +687,7 @@
             if (visibleContainer) state.watchlistContainer = visibleContainer;
         }
         state.watchlistRequested = false;
+        state.providerOpening = false;
         state.refreshOnWatchlistViewShow = false;
         document.documentElement.classList.remove("pw-watchlist-route-active");
         if (clearUrl) removeWatchlistUrlMarker();
